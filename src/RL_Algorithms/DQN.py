@@ -103,20 +103,20 @@ class CLF():
         actions    = self.experienceCache[1][sampleIndices]
         rewards    = self.experienceCache[2][sampleIndices]
         nextStates = self.experienceCache[3][:,sampleIndices]
-        aBatch,zBatch = self.Q_Apx.ForwardProp(states)
+        aBatch,zBatch = self.Q_Apx.forward_prop(states)
         
-        Qnow = self.Q_Apx.Predict(states)
-        Qnext = self.Q_Apx.Predict(nextStates)
+        Qnow = self.Q_Apx.predict(states)
+        Qnext = self.Q_Apx.predict(nextStates)
         yBatch = Qnow.copy()
 
         for s in range(len(sampleIndices)):
             yBatch[actions[s],s] =  rewards[s] + self.rewardDiscount * np.max(Qnext[:,s])
         
-        dz,dw,db = self.Q_Apx.BackProp(yBatch,aBatch,zBatch)
+        dz,dw,db = self.Q_Apx.back_prop(yBatch, aBatch, zBatch)
         self.t+=1;
-        self.Q_Apx.OptimizationStep(dw,db,self.t)             
+        self.Q_Apx.optimization_step(dw, db, self.t)
     def EpsilonPolicy(self,state):
-        Q = self.Q_Apx.Predict(state).squeeze()
+        Q = self.Q_Apx.predict(state).squeeze()
         bestAction = np.argwhere(Q == np.amax(Q)) # This gives ALL indices where Q == max(Q)
         actionProbablities = np.ones(self.nA)*self.epsilon/self.nA
         actionProbablities[bestAction]+=(1-self.epsilon)/len(bestAction)

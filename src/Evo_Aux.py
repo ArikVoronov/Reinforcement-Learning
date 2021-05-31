@@ -9,7 +9,7 @@ class EvoAgent():
         self.net = net
 
     def pick_action(self, state):
-        a, _ = self.net.ForwardProp(state)
+        a, _ = self.net.forward_prop(state)
         action = np.argmax(a[-1])
         return action
 
@@ -148,7 +148,7 @@ if __name__ == "__main__":
         tolerance = 1e-5  # Irrelevant to RL
         layer_parameters = [[10]]
         layer_types = ['fc']
-        actuators = [[0], ReLU2, LinAct]
+        actuators = [[0], relu2, lin_act]
 
         alpha = 0.01  # Learning Rate, this is just a temporary placeholder, the actual value is defined in the main loop
         beta1 = 0.9  # Step weighted average parameter
@@ -157,7 +157,7 @@ if __name__ == "__main__":
         epsilon = 1e-8  # Addition to denominator to prevent div by 0
         lam = 1e-8  # Regularization parameter
         lossFunctionType = 'Regular'
-        NeuralNet = network(epochs, tolerance, actuators, layer_parameters, layer_types, alpha, beta1, beta2, epsilon,
+        NeuralNet = Network(epochs, tolerance, actuators, layer_parameters, layer_types, alpha, beta1, beta2, epsilon,
                             gamma, lam, lossFunctionType)
         # NeuralNet.setupLayerSizes(x,y)
         return NeuralNet

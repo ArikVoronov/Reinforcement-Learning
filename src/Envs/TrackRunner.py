@@ -1,10 +1,9 @@
-import pygame
 import numpy as np
+import pygame
 
 from src.Envs.TrackBuilder import Track, CoordinateTransformer
-from src.RL_Aux import RunEnv
-
 from src.Envs.consts import *
+from src.RL_Aux import run_env
 
 
 def get_line_parameters(pos, angle):
@@ -165,14 +164,24 @@ class Player:
 
 
 class TrackRunnerEnv:
-    def __init__(self, run_velocity, turn_degrees, track):
+    def __init__(self, run_velocity, turn_degrees, track, max_steps=None):
         self.coordinate_transformer = None
-        self.track = track
+        if isinstance(track, Track):
+            self.track = track
+        elif type(track) == str:
+            self.track = Track.load(track)
+        else:
+            raise TypeError(f'track type must be string or {Track}')
+
         self.turnDegrees = turn_degrees
         self.runVelocity = run_velocity
         self.number_of_actions = 3
         self.state_vector_dimension = 5
         self.reward = 0
+        if max_steps is None:
+            self.max_steps = np.inf
+        else:
+            self.max_steps = max_steps
 
         self.reset()
 
@@ -190,9 +199,10 @@ class TrackRunnerEnv:
         self.player.update(action)
         self.get_state()
         self.reward = self.get_reward()
-        if self.player.collide or self.steps > 1000:
-            if self.steps > 1000:
-                print('Timed out')
+        if self.steps > self.max_steps:
+            print('Timed out')
+            self.done = True
+        if self.player.collide:
             self.done = True
         return self.state, self.reward, self.done
 
@@ -245,9 +255,8 @@ if __name__ == "__main__":
 
 
     track_file_path = '.\\Tracks\\round__v_inside_10__v_outside_10.pkl'
-    track = Track.load(track_file_path)
     run_velocity = 0.01
     turn_degrees = 10
     agent = human_player
-    env = TrackRunnerEnv(run_velocity, turn_degrees, track)
-    RunEnv(runs=2, env=env, agent=agent, frameRate=30)
+    env = TrackRunnerEnv(run_velocity, turn_degrees, track_file_path)
+    run_env(runs=2, env=env, agent=agent, frame_rate=30)

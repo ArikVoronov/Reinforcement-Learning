@@ -1,4 +1,4 @@
-from src.RL_Aux import SetupNeuralNetApx, NullifyQs
+from src.RL_Aux import setup_neural_net_apx, nullify_qs
 from src.Evo_Aux import GAOptimizer, EvoAgent, EvoFitnessFunction
 from src.Envs import TrackRunner
 from src.Envs.TrackBuilder import *
@@ -13,9 +13,9 @@ if __name__ == '__main__':
     env = TrackRunner.TrackRunnerEnv(run_velocity=0.02, turn_degrees=15, track=track)
 
     saveFile = None
-    EvoNet = SetupNeuralNetApx(nS=env.state_vector_dimension, nA=3, learningRate=1e-3, featurize=None, saveFile=saveFile)
+    EvoNet = setup_neural_net_apx(state_dimension=env.state_vector_dimension, number_of_actions=3, learning_rate=1e-3, featurize=None, save_file=saveFile)
     if saveFile == None:
-        NullifyQs(EvoNet, env)
+        nullify_qs(EvoNet, env)
     evoAgent = EvoAgent(EvoNet)
     fitness = EvoFitnessFunction(env, evoAgent)
     gao = GAOptimizer(specimenCount=200, survivorCount=20, tol=0, maxIterations=50,

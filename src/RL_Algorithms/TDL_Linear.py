@@ -41,7 +41,7 @@ class CLF():
 
 
     def EpsilonPolicy(self,state):
-        Q = self.apx.Predict(state)
+        Q = self.apx.predict(state)
         Q = Q.squeeze()
         bestAction = np.argwhere(Q == np.amax(Q)) # This gives ALL indices where Q == max(Q)
         actionProbablities = np.ones(self.nA)*self.epsilon/self.nA
@@ -53,29 +53,29 @@ class CLF():
         return action
 
     def Optimize(self,state,nextState,reward,action):
-        Qnow = self.apx.Predict(state)
-        Qnext= self.apx.Predict(nextState)
+        Qnow = self.apx.predict(state)
+        Qnext= self.apx.predict(nextState)
         target = reward + self.rewardDiscount * np.max(Qnext)
         delta = Qnow[action] - target
         
-        dQw,dQb = self.apx.BackProp(state,action)
+        dQw,dQb = self.apx.back_prop(state, action)
         # TD(lam)
         self.eTraceW = self.rewardDiscount* self.lam * self.eTraceW + dQw
         self.eTraceB = self.rewardDiscount* self.lam * self.eTraceB + dQb
         dw = delta * self.eTraceW
         db = delta * self.eTraceB
-        self.apx.optimize(dw, db)
+        self.apx.optimize_step(dw, db)
         
     def OptimizeREG(self,state,nextState,reward,action):
-        Qnow = self.apx.Predict(state)
-        Qnext= self.apx.Predict(nextState)
+        Qnow = self.apx.predict(state)
+        Qnext= self.apx.predict(nextState)
         target = reward + self.rewardDiscount * np.max(Qnext)
         delta = Qnow[action] - target
-        dQw,dQb = self.apx.BackProp(state,action)
+        dQw,dQb = self.apx.back_prop(state, action)
         dw = delta*dQw
         db = delta*dQb
         
-        self.apx.optimize(dw, db)
+        self.apx.optimize_step(dw, db)
         
     def Train(self,env):
         self.episodeStepsList = []

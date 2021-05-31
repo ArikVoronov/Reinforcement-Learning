@@ -198,7 +198,7 @@ if __name__=='__main__':
         Zp = np.zeros(pLim)
         for i in range(pLim[0]):
             for j in range(pLim[1]):
-                Zp[j,i] = decNN.Predict(np.array([xp[i],yp[j]]).reshape(2,1))[0]
+                Zp[j,i] = decNN.predict(np.array([xp[i], yp[j]]).reshape(2, 1))[0]
             
         ZZp = TargetFunction(Xp,Yp)
 
