@@ -16,8 +16,12 @@ def make_agent(agent):
 
 if __name__ == '__main__':
     track = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\src\Envs\Tracks\round__v_inside_10__v_outside_10.pkl'
-    env = TrackRunner.TrackRunnerEnv(run_velocity=0.03, turn_degrees=20,  track=track)
-    agent_file_path = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\23_44_06\weights_episode_1900.pkl'
+    track = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\src\Envs\Tracks\tracky.pkl'
+
+    env = TrackRunner.TrackRunnerEnv(run_velocity=0.02, turn_degrees=20,  track=track)
+    # agent_file_path = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\23_44_06\weights_episode_1900.pkl'
+    agent_file_path = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\evo_agents\evo_agent_2021_06_01-23_14.pkl'
+    agent_file_path = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\2021_06_01-23_19\weights_episode_1600.pkl'
     apx = setup_neural_net_apx(state_dimension=env.state_vector_dimension, number_of_actions=env.number_of_actions,
                                learning_rate=None)
     agent = QL.CLF(apx, number_of_actions=env.number_of_actions,epsilon=0)

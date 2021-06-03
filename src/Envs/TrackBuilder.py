@@ -292,9 +292,8 @@ def build_round_track(vertices_inside_n, vertices_outside_n):
 
 def main():
     # Run game
-    # track = build_track()
-    # track.save(DEFAULT_TRACKS_FOLDER_PATH)
-    track = build_round_track(10, 10)
+    track = build_track()
+    # track = build_round_track(10, 10)
     track.save(DEFAULT_TRACKS_FOLDER_PATH)
 
     # track_path = '.\\Tracks\\round__v_inside_6__v_outside_6.pkl'

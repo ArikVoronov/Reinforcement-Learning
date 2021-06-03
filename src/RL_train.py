@@ -36,24 +36,24 @@ def plots():
 if __name__ == '__main__':
 
     # Build Env
-    track = '.\\Envs\\Tracks\\round__v_inside_10__v_outside_10.pkl'
-    env = TrackRunner.TrackRunnerEnv(run_velocity=0.03, turn_degrees=20, track=track,max_steps=100)
+    track = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\src\Envs\Tracks\tracky.pkl'
+    env = TrackRunner.TrackRunnerEnv(run_velocity=0.02, turn_degrees=20, track=track,max_steps=100)
 
     # Create Approximators
     save_file = None
 
     # Approximators
     np.random.seed(48)
-    linear_approximator = TDL_Linear.LinearApproximator(nS=env.state_vector_dimension, nA=3, learningRate=1e-3,
-                                                        featurize=None,
-                                                        saveFile=None)
-    q_net_apx = setup_neural_net_apx(state_dimension=env.state_vector_dimension, number_of_actions=3, learning_rate=1e-4,
+    # linear_approximator = TDL_Linear.LinearApproximator(nS=env.state_vector_dimension, nA=3, learningRate=1e-3,
+    #                                                     featurize=None,
+    #                                                     saveFile=None)
+    q_net_apx = setup_neural_net_apx(state_dimension=env.state_vector_dimension, number_of_actions=3, learning_rate=1e-3,
                                      featurize=None,
                                      save_file=save_file)
-    decoupled_network = DecoupledNN(learningRate=5e-4, batchSize=500, batches=20, maxEpochs=100,
-                                    netLanes=env.number_of_actions, layerSizes=[200],
-                                    inputSize=env.state_vector_dimension,
-                                    activationFunctions=[[], relu2, softmax])
+    # decoupled_network = DecoupledNN(learningRate=5e-4, batchSize=500, batches=20, maxEpochs=100,
+    #                                 netLanes=env.number_of_actions, layerSizes=[200],
+    #                                 inputSize=env.state_vector_dimension,
+    #                                 activationFunctions=[[], relu2, softmax])
     if save_file is None:
         nullify_qs(q_net_apx, env)
 

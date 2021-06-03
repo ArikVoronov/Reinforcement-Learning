@@ -3,6 +3,7 @@ import sys
 from src.ConvNet.ConvNet import *
 from src.ConvNet.ActivationFunctions import *
 
+from tqdm import tqdm
 
 class EvoAgent():
     def __init__(self, net):
@@ -111,12 +112,12 @@ class GAOptimizer():
         generation = self.InitializeGeneration(variableList)
         self.fitnessHistory = []
         self.bestSurvivorHistory = []
-        for itr in range(self.maxIterations):
+        pbar = tqdm(range(self.maxIterations))
+        for itr in pbar:
             bestGenes, bestFit = self.BestSpecimens(generation, fitnessFunction)
             generation = self.BreedNewGeneration(bestGenes)
 
-            if itr % self.smoothing == 0:
-                print('Iteration: {}, Best fitness: {}'.format(itr, bestFit))
+            pbar.desc = f'Best fitness: {bestFit:.2f}'
             self.bestSurvivor = generation[0]
             self.fitnessHistory.append(bestFit)
             self.bestSurvivorHistory.append(self.bestSurvivor)

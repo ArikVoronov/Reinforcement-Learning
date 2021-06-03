@@ -27,7 +27,8 @@ class CLF:
         self.epsilon = self.epsilon_0
         self._output_dir = output_dir_path
         if self._output_dir is not None:
-            ts = datetime.now().strftime('%H_%M_%S')
+            FORMAT = "%Y_%m_%d-%H_%M"
+            ts = datetime.now().strftime(FORMAT)
             self._output_dir = os.path.join(self._output_dir, ts)
             os.makedirs(self._output_dir, exist_ok=True)
 

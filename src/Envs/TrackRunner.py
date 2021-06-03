@@ -254,9 +254,10 @@ if __name__ == "__main__":
         return action
 
 
-    track_file_path = '.\\Tracks\\round__v_inside_10__v_outside_10.pkl'
+    track = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\src\Envs\Tracks\tracky.pkl'
+
     run_velocity = 0.01
-    turn_degrees = 10
+    turn_degrees = 20
     agent = human_player
-    env = TrackRunnerEnv(run_velocity, turn_degrees, track_file_path)
-    run_env(runs=2, env=env, agent=agent, frame_rate=30)
+    env = TrackRunnerEnv(run_velocity, turn_degrees, track)
+    run_env(runs=2, env=env, agent=agent, frame_rate=10)
