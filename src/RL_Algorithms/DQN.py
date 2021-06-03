@@ -42,7 +42,7 @@ class CLF():
     def CopyWeights(self):
         self.Q_Target.wv = copy.deepcopy(self.Q_Apx.wv)
         self.Q_Target.bv = copy.deepcopy(self.Q_Apx.bv)
-    def Train(self,env):
+    def train(self, env):
         for episode in range(self.maxEpisodes):
             state = env.reset()
             state = self.featurize(state).reshape([-1,1])
@@ -81,8 +81,8 @@ class CLF():
                         #print('W ',np.sqrt(np.mean(self.Q_Apx.wv[-1]**2)))
                         print('Episode {0}/{1} ; Steps {2} ; Reward {3:1.2f}'
                               .format(episode,self.maxEpisodes, totalSteps/self.printoutEps,totalReward/self.printoutEps))
-                        if episode % (self.printoutEps*5)==0 and episode>0:
-                            Pickler('pickled.dat',[self.Q_Apx.wv,self.Q_Apx.bv])
+                        # if episode % (self.printoutEps*5)==0 and episode>0:
+                        #     Pickler('pickled.dat',[self.Q_Apx.wv,self.Q_Apx.bv])
                     break
 
     def GetSampleIndices(self):
