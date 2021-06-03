@@ -1,11 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from src.ConvNet.ActivationFunctions import relu2, softmax
-from src.DecoupledNN.DecoupledNN import DecoupledNN
 from src.Envs import TrackRunner
-from src.RL_Algorithms import QL, TDL_Linear
-from src.RL_Aux import setup_neural_net_apx, nullify_qs, moving_average
+from src.RL_Algorithms import QL
+from src.utils.rl_utils import setup_neural_net_apx, nullify_qs, moving_average
 
 
 def plots():

@@ -1,6 +1,5 @@
-import numpy as np
 import copy
-from src.RL_Aux import *
+from src.utils.rl_utils import *
 
 class CLF():
     def __init__(self,apx,env,

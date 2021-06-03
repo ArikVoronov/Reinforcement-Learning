@@ -3,7 +3,7 @@ import pygame
 
 from src.Envs.TrackBuilder import Track, CoordinateTransformer
 from src.Envs.consts import *
-from src.RL_Aux import run_env
+from src.utils.rl_utils import run_env
 
 
 def get_line_parameters(pos, angle):

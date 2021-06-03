@@ -189,3 +189,18 @@ def run_env(runs, env, agent, frame_rate=30):
             if run_count >= runs:
                 exit_run = True
     pygame.quit()
+
+
+class NeuralNetworkAgent:
+    def __init__(self, apx):
+        self.q_approximator = apx
+
+    def load_weights(self, weights_file_path):
+        self.q_approximator.load_weights(weights_file_path)
+
+    def pick_action(self, state):
+        a, z = self.q_approximator.forward_prop(state)
+        q = a[-1]
+        q = q.squeeze()
+        best_action = np.argwhere(q == np.amax(q))
+        return best_action

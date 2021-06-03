@@ -1,7 +1,6 @@
-import numpy as np
 import copy
 import random
-from src.RL_Aux import *
+from src.utils.rl_utils import *
 
 
 class CLF():

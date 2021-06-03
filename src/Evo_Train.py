@@ -2,8 +2,8 @@ import datetime
 
 from src.Envs import TrackRunner
 from src.Envs.TrackBuilder import *
-from src.Evo_Aux import GAOptimizer, EvoAgent, EvoFitnessFunction
-from src.RL_Aux import setup_neural_net_apx, nullify_qs
+from src.utils.evo_utils import GAOptimizer, EvoAgent, EvoFitnessFunction
+from src.utils.rl_utils import setup_neural_net_apx, nullify_qs
 
 if __name__ == '__main__':
     # make env
