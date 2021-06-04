@@ -42,13 +42,13 @@ if __name__ == "__main__":
     y_pred1 = linReg.predict(Xi)
 
     # my regressor timing
-    LR = LinReg()
+    lr = LinReg()
     time1 = time.time()
     for i in range(100):
-        LR.fit(Xi,yi)
+        lr.fit(Xi, yi)
     time2 = time.time()
     print('2',time2-time1)
-    y_pred2 = LR.predict(Xi)
+    y_pred2 = lr.predict(Xi)
 
     # Compare errors
     error1 = np.sum((y_pred1-yi)**2)/samples
