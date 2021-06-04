@@ -40,7 +40,7 @@ def nullify_qs(network, env):
 
     # Assuming wn = 1, fit linearly to states
     lin_reg = LinearReg.LinReg()
-    lin_reg.fit(state_matrix[:, :-1], -state_matrix[:, -1])
+    lin_reg.fit(states_left_hand, -state_matrix[:, -1])
     w_new = np.hstack([lin_reg.w, 1])
     b_new = lin_reg.b
     network.wv[1] = np.tile(w_new[:, None], network.wv[1].shape[0]).T
