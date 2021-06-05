@@ -3,7 +3,7 @@ import pygame
 
 from src.Envs.TrackBuilder import Track, CoordinateTransformer
 from src.Envs.consts import *
-from src.utils.rl_utils import run_env
+from src.Envs.env_utils import run_env,HumanController
 
 
 def get_line_parameters(pos, angle):
@@ -236,28 +236,12 @@ class TrackRunnerEnv:
 
 
 if __name__ == "__main__":
-    def human_player(state):
-        # Must run pygame.event.get() previously to execute:
-        left = pygame.key.get_pressed()[pygame.K_LEFT]
-        right = pygame.key.get_pressed()[pygame.K_RIGHT]
-        up = pygame.key.get_pressed()[pygame.K_UP]
-        down = pygame.key.get_pressed()[pygame.K_DOWN]
-        action = 0  # do nothing
-        if left:
-            action = 1
-        if right:
-            action = 2
-        if up:
-            action = 3
-        if down:
-            action = 4
-        return action
-
 
     track = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\src\Envs\Tracks\tracky.pkl'
 
     run_velocity = 0.01
     turn_degrees = 20
-    agent = human_player
+    human_player = HumanController()
+    agent = human_player.pick_action
     env = TrackRunnerEnv(run_velocity, turn_degrees, track)
     run_env(runs=2, env=env, agent=agent, frame_rate=10)

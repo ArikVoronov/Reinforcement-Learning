@@ -1,7 +1,4 @@
-import os
-
 import numpy as np
-import pygame
 import sklearn.pipeline
 import sklearn.preprocessing
 from sklearn.kernel_approximation import RBFSampler
@@ -144,52 +141,6 @@ def setup_neural_net_apx(state_dimension, number_of_actions, learning_rate, feat
         print('\nVariables loaded from ' + save_file)
     network.learning_rate = learning_rate
     return network
-
-
-def run_env(runs, env, agent, frame_rate=30):
-    # This allows viewing games in real time to see the current RL agent performance
-    pygame.init()
-    # Display
-    display_width = 800
-    display_height = 600
-    os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (200, 50)
-    modes = pygame.display.list_modes(32)
-    game_display = pygame.display.set_mode((display_width, display_height))
-    pygame.display.set_caption("Track Runner")
-    clock = pygame.time.Clock()
-
-    state = env.reset()
-    run_count = 0
-    reward_total = 0
-    exit_run = False
-    run_state = 'RUNNING'
-    while not exit_run:
-        events = pygame.event.get()
-        for event in events:
-            if event.type == pygame.QUIT:
-                exit_run = True
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_p:
-                    run_state = 'PAUSED'
-                if event.key == pygame.K_o:
-                    run_state = 'RUNNING'
-        if run_state == 'RUNNING':
-            action = agent(state)
-            state, reward, done = env.step(action)
-            reward_total += reward
-            if done:
-                run_count += 1
-                print("Run# {} ; Steps {} ; Total Reward {}".format(run_count, env.steps, reward_total))
-                env.reset()
-                reward_total = 0
-            # Rendering
-            env.render(game_display)
-            pygame.display.update()
-            clock.tick(frame_rate)
-            if run_count >= runs:
-                exit_run = True
-    pygame.quit()
-
 
 class NeuralNetworkAgent:
     def __init__(self, apx):

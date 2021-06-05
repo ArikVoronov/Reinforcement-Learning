@@ -1,9 +1,8 @@
-import os
-
 import numpy as np
 import pygame
 
 from src.Envs.consts import *
+from src.Envs.env_utils import run_env, HumanController
 
 
 # Game object classes
@@ -15,7 +14,7 @@ class PaddleClass:
         self.wall_y = wall_y
 
     def move(self, action):
-        if action == 0:
+        if action == 1:
             self.position[1] += self.move_speed
         elif action == 2:
             self.position[1] -= self.move_speed
@@ -91,29 +90,6 @@ class BallClass:
                 self.vel[1] = self.speed * (np.sin(self.angle))
                 self.position[0] += self.vel[0] * 2
                 break
-
-
-class HumanController:
-    """
-    This is a human controller, accepts input from keyboard
-    """
-
-    def __init__(self):
-        self.isHuman = True
-        self.action = 1  # 0 Move down; 1 Don't move; 2 Move Up
-        self.events = []
-
-    def pick_action(self):
-        # NOTE: this keeps an action until any other input is given
-        for event in self.events:
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_DOWN:
-                    self.action = 2
-                elif event.key == pygame.K_UP:
-                    self.action = 0
-            if event.type == pygame.KEYUP:
-                self.action = 1
-        return self.action
 
 
 class AIController:
@@ -198,7 +174,7 @@ class AIControllerTrajectory:
 
 
 class PongEnv:
-    def __init__(self, left_paddle_speed, right_paddle_speed, ball_speed, games_per_match, wall_y=0.1):
+    def __init__(self, left_paddle_speed, right_paddle_speed, ball_speed, games_per_match=1, wall_y=0.1):
         self.gamesPerMatch = games_per_match
         self.games = 0
         self.state_vector_dimension = 7
@@ -207,7 +183,7 @@ class PongEnv:
         left_paddle = PaddleClass(position=[0.05, 0.5], width=0.1, move_speed=left_paddle_speed, wall_y=wall_y)
         right_paddle = PaddleClass(position=[0.95, 0.5], width=0.1, move_speed=right_paddle_speed, wall_y=wall_y)
         paddles = [left_paddle, right_paddle]
-        ball = BallClass(speed=ball_speed, wall_y=0.1)
+        ball = BallClass(speed=ball_speed, wall_y=wall_y)
         self.paddles = paddles
         self.ball = ball
         self.rival = AIController(right_paddle, ball)
@@ -238,7 +214,7 @@ class PongEnv:
             pad.position[1] = 0.5
         self.state = self.state_update()
 
-    def step(self, player_action=1):
+    def step(self, player_action=0):
         self.deltaScore = np.array([0, 0])
         self.steps += 1
         # Update paddles
@@ -324,49 +300,8 @@ class PongEnv:
 
 
 if __name__ == "__main__":
-    def game_loop():
-        pygame.init()
-        # Display
-        os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (200, 50)
-        display_width = 640
-        display_height = 480
-        game_display = pygame.display.set_mode((display_width, display_height))
-        pygame.display.set_caption("Pong")
-        clock = pygame.time.Clock()
-        pong_game = PongEnv(ball_speed=0.02, left_paddle_speed=0.02, right_paddle_speed=0.01, games_per_match=10)
-        human_player = HumanController()
-        exit_game = False
-        game_state = 'RUNNING'
-        while not exit_game:
-            # In case quit
-            events = pygame.event.get()
-            for event in events:
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    quit()
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_p:
-                        game_state = 'PAUSED'
-                    if event.key == pygame.K_o:
-                        game_state = 'RUNNING'
-            if game_state == 'RUNNING':
-                # Human input
-                human_player.events = events
-                player_action = human_player.pick_action()
-                # Game step
-                state, reward, done = pong_game.step(player_action)
-                # Render
-                pong_game.render(game_display)
-                # If scored goal, reset
-                if done:
-                    print('Done')
-                    pong_game.reset()
-                    pong_game.render(game_display)
-                    pygame.time.wait(200)
-            elif game_state == 'PAUSED':
-                pass
-            clock.tick(60)
-
-
-    # Run game
-    game_loop()
+    env = PongEnv(ball_speed=0.02, left_paddle_speed=0.02, right_paddle_speed=0.01, games_per_match=10,wall_y=0.4)
+    key_map = {'K_UP': 1, 'K_DOWN': 2}
+    human_player = HumanController(key_map=key_map)
+    agent = human_player.pick_action
+    run_env(runs=1, env=env, agent=agent)
