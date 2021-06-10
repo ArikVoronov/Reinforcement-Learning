@@ -4,8 +4,8 @@ import sklearn.preprocessing
 from sklearn.kernel_approximation import RBFSampler
 
 import src.Regressors.LinearReg as LinearReg
-from src.ConvNet.ActivationFunctions import relu2, lin_act
-from src.ConvNet.ConvNet import Network
+from src.ConvNet.activation_functions import relu2, lin_act
+from src.ConvNet.model import Model
 
 
 def replicate_weights(clfs):
@@ -119,9 +119,9 @@ def setup_neural_net_apx(state_dimension, number_of_actions, learning_rate, feat
         epsilon = 1e-8  # Addition to denominator to prevent div by 0
         lam = 1e-5  # Regularization parameter
         learning_decay = 1.0
-        neural_net = Network(epochs, tolerance, actuators, layer_parameters, layer_types,
-                             learning_rate, beta1, beta2, epsilon, lam, learning_decay=learning_decay,
-                             cost_function_type='L2')
+        neural_net = Model(epochs, tolerance, actuators, layer_parameters, layer_types,
+                           learning_rate, beta1, beta2, epsilon, lam, learning_decay=learning_decay,
+                           cost_function_type='L2')
         neural_net.setup_layer_sizes(x, y)
         return neural_net
 
@@ -137,7 +137,7 @@ def setup_neural_net_apx(state_dimension, number_of_actions, learning_rate, feat
     network.initialize_weights()
     if save_file is not None:
         # Unpickle -  Data = [wv,bv]
-        network.load_weights(save_file)
+        network.load_model_weights(save_file)
         print('\nVariables loaded from ' + save_file)
     network.learning_rate = learning_rate
     return network
@@ -147,10 +147,10 @@ class NeuralNetworkAgent:
         self.q_approximator = apx
 
     def load_weights(self, weights_file_path):
-        self.q_approximator.load_weights(weights_file_path)
+        self.q_approximator.load_model_weights(weights_file_path)
 
     def pick_action(self, state):
-        a, z = self.q_approximator.forward_prop(state)
+        a, z = self.q_approximator.forward(state)
         q = a[-1]
         q = q.squeeze()
         best_action = np.argwhere(q == np.amax(q))

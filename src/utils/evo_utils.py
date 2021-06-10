@@ -1,7 +1,7 @@
 from tqdm import tqdm
 
-from src.ConvNet.ActivationFunctions import *
-from src.ConvNet.ConvNet import *
+from src.ConvNet.activation_functions import *
+from src.ConvNet.model import *
 
 
 class EvoAgent:
@@ -9,7 +9,7 @@ class EvoAgent:
         self.net = net
 
     def pick_action(self, state):
-        a, _ = self.net.forward_prop(state)
+        a, _ = self.net.forward(state)
         action = np.argmax(a[-1])
         return action
 
@@ -17,8 +17,8 @@ class EvoAgent:
 def evo_fitness_function(env, agent):
     def agent_fitness(gen):
         half_gen = int(len(gen) / 2)
-        agent.net.wv = gen[0:half_gen]
-        agent.net.bv = gen[half_gen:]
+        agent.model.wv = gen[0:half_gen]
+        agent.model.bv = gen[half_gen:]
         state = env.reset()
         total_reward = 0
         done = False
@@ -171,8 +171,8 @@ if __name__ == "__main__":
         epsilon = 1e-8  # Addition to denominator to prevent div by 0
         lam = 1e-8  # Regularization parameter
         loss_function_type = 'Regular'
-        neural_net = Network(epochs, tolerance, actuators, layer_parameters, layer_types, alpha, beta1, beta2, epsilon,
-                             gamma, lam, loss_function_type)
+        neural_net = Model(epochs, tolerance, actuators, layer_parameters, layer_types, alpha, beta1, beta2, epsilon,
+                           gamma, lam, loss_function_type)
         # neural_net.setupLayerSizes(x,y)
         return neural_net
 

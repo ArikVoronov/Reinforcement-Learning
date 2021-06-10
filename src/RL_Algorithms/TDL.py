@@ -64,14 +64,14 @@ class CLF():
     def Optimize(self,state,nextState,reward,action):
         Qnow = self.a[-1]
 
-        aNext,_ = self.Q_Apx.forward_prop(nextState)
+        aNext,_ = self.Q_Apx.forward(nextState)
         Qnext = aNext[-1]
 
         y = Qnow.copy()
         
         y[action] =  reward + self.rewardDiscount * np.max(Qnext)
 
-        dz,dw,db = self.Q_Apx.back_prop(y, self.a, self.z)
+        dz,dw,db = self.Q_Apx.backward(y, self.a, self.z)
 
         # TD(lambda)
         # dw = (y-a)*dQ ;   eTrace = gamma * lambda * e + dQ
@@ -87,7 +87,7 @@ class CLF():
         self.t+=1
         self.Q_Apx.optimization_step(dwTarget, dbTarget, self.t)
     def EpsilonPolicy(self,state):
-        self.a,self.z = self.Q_Apx.forward_prop(state)
+        self.a,self.z = self.Q_Apx.forward(state)
         Q = self.a[-1].squeeze()
         bestAction = np.argwhere(Q == np.amax(Q)) # This gives ALL indices where Q == max(Q)
         actionProbablities = np.ones(self.nA)*self.epsilon/self.nA

@@ -102,7 +102,7 @@ class CLF():
         actions    = self.experienceCache[1][sampleIndices]
         rewards    = self.experienceCache[2][sampleIndices]
         nextStates = self.experienceCache[3][:,sampleIndices]
-        aBatch,zBatch = self.Q_Apx.forward_prop(states)
+        aBatch,zBatch = self.Q_Apx.forward(states)
         
         Qnow = self.Q_Apx.predict(states)
         Qnext = self.Q_Apx.predict(nextStates)
@@ -111,7 +111,7 @@ class CLF():
         for s in range(len(sampleIndices)):
             yBatch[actions[s],s] =  rewards[s] + self.rewardDiscount * np.max(Qnext[:,s])
         
-        dz,dw,db = self.Q_Apx.back_prop(yBatch, aBatch, zBatch)
+        dz,dw,db = self.Q_Apx.backward(yBatch, aBatch, zBatch)
         self.t+=1;
         self.Q_Apx.optimization_step(dw, db, self.t)
     def EpsilonPolicy(self,state):

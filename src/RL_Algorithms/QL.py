@@ -33,7 +33,7 @@ class CLF:
             os.makedirs(self._output_dir, exist_ok=True)
 
     def load_weights(self, weights_file_path):
-        self.q_approximator.load_weights(weights_file_path)
+        self.q_approximator.load_model_weights(weights_file_path)
 
     def train(self, env):
         for episode in range(self.max_episodes):
@@ -70,14 +70,14 @@ class CLF:
         y = q_current.copy()
         _, _, q_next = self.get_q(next_state)
         y[action] = reward + self.reward_discount * np.max(q_next)
-        dz, dw, db = self.q_approximator.back_prop(y, a, z,
-                                                   dzFunc='Linear/L2')
+        dz, dw, db = self.q_approximator.backward(y, a, z,
+                                                  dz_func='Linear/L2')
         # dzFunc is dL/dz = dL/da*da/dz=self.actuators[-1](z[-1],1)
         self.t += 1
         self.q_approximator.optimization_step(dw, db, self.t)
 
     def get_q(self, state):
-        a, z = self.q_approximator.forward_prop(state)
+        a, z = self.q_approximator.forward(state)
         prediction = a[-1]
         return a, z, prediction
 

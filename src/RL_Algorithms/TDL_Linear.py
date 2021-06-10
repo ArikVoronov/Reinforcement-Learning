@@ -58,7 +58,7 @@ class CLF():
         target = reward + self.rewardDiscount * np.max(Qnext)
         delta = Qnow[action] - target
         
-        dQw,dQb = self.apx.back_prop(state, action)
+        dQw,dQb = self.apx.backward(state, action)
         # TD(lam)
         self.eTraceW = self.rewardDiscount* self.lam * self.eTraceW + dQw
         self.eTraceB = self.rewardDiscount* self.lam * self.eTraceB + dQb
@@ -71,7 +71,7 @@ class CLF():
         Qnext= self.apx.predict(nextState)
         target = reward + self.rewardDiscount * np.max(Qnext)
         delta = Qnow[action] - target
-        dQw,dQb = self.apx.back_prop(state, action)
+        dQw,dQb = self.apx.backward(state, action)
         dw = delta*dQw
         db = delta*dQb
         

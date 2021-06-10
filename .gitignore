@@ -132,3 +132,7 @@ dmypy.json
 # pickles
 *.dat
 *.pkl
+
+# folders
+output/
+data/

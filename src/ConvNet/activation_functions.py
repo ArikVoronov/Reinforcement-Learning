@@ -16,7 +16,7 @@ def relu(z, derive):
     if derive == 0:
         y = z * (z > 0)  # get only the values larger than zero and normalize them
     elif derive == 1:
-        y = (z > 0)  # get only the values larger than zero and normalize them
+        y = np.array(z > 0,dtype=float)  # get only the values larger than zero and normalize them
     else:
         raise ValueError('derive must be 1 or 0')
     return y
@@ -57,14 +57,29 @@ def softmax_old(z, derive):
 
 
 def softmax(z, derive):
-    e = np.exp(z - np.max(z, axis=0))
+    e = np.exp(z)
     e_sum = np.sum(e, axis=0)
     a = e / e_sum
     if derive == 0:
         y = a
     elif derive == 1:
         y = a * (1 - a)
+    else:
+        raise ValueError('derive must be 1 or 0')
     return y
+
+
+
+
+def square(z, derive):
+    if derive == 0:
+        y = z**2
+    elif derive == 1:
+        y = 2*z
+    else:
+        raise ValueError('derive must be 1 or 0')
+    return y
+
 
 
 def softplus(z, derive):
@@ -73,6 +88,7 @@ def softplus(z, derive):
     elif derive == 1:
         y = 1 / (np.exp(-z) + 1)
     return y
+
 
 
 def actor_cont_actuator(z, derive):

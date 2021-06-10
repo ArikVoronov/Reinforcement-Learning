@@ -99,3 +99,6 @@ for t in range(2000):
 
 print(f'Result: y = {a.item()} + {b.item()} * P3({c.item()} + {d.item()} x)')
 P3 = LegendrePolynomial3.apply
+
+
+torch.autograd.Function
