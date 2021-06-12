@@ -15,7 +15,7 @@ class Context:
             self._saved_tensors.append(arg)
 
     def get_saved_tensors(self):
-        if len(self._saved_tensors)==1:
+        if len(self._saved_tensors) == 1:
             return self._saved_tensors[0]
         else:
             return self._saved_tensors
@@ -44,10 +44,10 @@ class InputLayer(LayerBase):
         self.db = None
 
     def forward(self, ctx, layer_input):
-        pass
+        return layer_input
 
     def backward(self, ctx, output):
-        pass
+        return output
 
 
 class FullyConnectedLayer(LayerBase):

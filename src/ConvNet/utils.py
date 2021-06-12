@@ -201,7 +201,7 @@ def grad_check(model, x_batch, y_batch):
     cost2 = model.calculate_loss(y_batch, y_pred_2)
     dw_approx = (cost2 - cost1) / (eps)
     dw_net = model.layers_list[L].dw[i, j]
-    error = (dw_approx - dw_net) / (np.abs(dw_approx) + np.abs(dw_net))
+    error = (dw_approx - dw_net) / (np.abs(dw_approx) + np.abs(dw_net) + eps)
     print(f'dw aprx {dw_approx}; dw net {dw_net}')
     print('grad check error {:1.3f}%'.format(error * 100))
     return dw_approx

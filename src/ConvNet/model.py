@@ -1,7 +1,7 @@
 import numpy as np
 
-from src.ConvNet.activation_functions import ReLu, Softmax,LinearActivation
-from src.ConvNet.layer_classes import FullyConnectedLayer, Context, InputLayer,LayerBase
+from src.ConvNet.activation_functions import ReLu
+from src.ConvNet.layer_classes import FullyConnectedLayer, Context, InputLayer, LayerBase
 from src.ConvNet.losses import MSELoss
 from src.ConvNet.optim import SGD
 from src.ConvNet.utils import standardize, make_one_hot_vector, train
@@ -14,10 +14,10 @@ class Model:
         self._loss = loss
         self.layers_list = [InputLayer()] + layers_list
 
-        self._ctx_list = [Context() for _ in range(len(layers_list) + 1)]
+        self._ctx_list = [Context() for _ in range(len(self.layers_list))]
         self._ctx_loss = Context()
 
-        self.params = [(layer.w, layer.b) for layer in self.layers_list if isinstance(layer,LayerBase)]
+        self.params = [(layer.w, layer.b) for layer in self.layers_list if isinstance(layer, LayerBase)]
 
         self.dz = None
 
@@ -29,24 +29,23 @@ class Model:
         return loss
 
     def forward(self, x):
-        a = [x]  # Zero'th member of a is the input
-        for L in range(1, len(self.layers_list)):
-            layer_input = a[L - 1]
-            a0 = self.layers_list[L].forward(self._ctx_list[L], layer_input)
-            a.append(a0)
-        return a
+        layer_input = x
+        last_output = None
+        for layer_number in range(len(self.layers_list)):
+            last_output = self.layers_list[layer_number].forward(self._ctx_list[layer_number], layer_input)
+            layer_input = last_output
+        return last_output
 
     def __call__(self, x):
-        return self.forward(x)[-1]
+        return self.forward(x)
 
     def backward(self):
         dz = []
         dz_last = self._loss.backward(self._ctx_loss)
 
         dz.insert(0, dz_last)
-        for L in range(1, len(self.layers_list)):
-            ind = len(self.layers_list) - L  # NOTE: counts from the end of the list, starts at len(ls)-1
-            dz_temp = self.layers_list[ind].backward(self._ctx_list[ind], dz[0])
+        for layer_number in range(len(self.layers_list) - 1, -1, -1):
+            dz_temp = self.layers_list[layer_number].backward(self._ctx_list[layer_number], dz[0])
             dz.insert(0, dz_temp)
         dz.insert(0, [0])
 
