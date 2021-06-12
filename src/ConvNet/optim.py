@@ -13,8 +13,9 @@ class OptimizerBase(ABC):
 
     def zero_grad(self):
         for layer in self.layers[1:]:
-            layer.dw = np.zeros_like(layer.w)
-            layer.db = np.zeros_like(layer.b)
+            if layer.grad_required:
+                layer.dw = np.zeros_like(layer.w)
+                layer.db = np.zeros_like(layer.b)
 
 
 class SGD(OptimizerBase):
@@ -24,8 +25,9 @@ class SGD(OptimizerBase):
 
     def step(self, t):
         for layer in self.layers[1:]:
-            layer.w += -self.learning_rate * layer.dw
-            layer.b += -self.learning_rate * layer.db
+            if layer.grad_required:
+                layer.w += -self.learning_rate * layer.dw
+                layer.b += -self.learning_rate * layer.db
 
 
 class ADAM(OptimizerBase):

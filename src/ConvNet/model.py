@@ -1,7 +1,7 @@
 import numpy as np
 
-from src.ConvNet.activation_functions import relu, softmax
-from src.ConvNet.layer_classes import FullyConnectedLayer, Context, InputLayer
+from src.ConvNet.activation_functions import ReLu, Softmax,LinearActivation
+from src.ConvNet.layer_classes import FullyConnectedLayer, Context, InputLayer,LayerBase
 from src.ConvNet.losses import MSELoss
 from src.ConvNet.optim import SGD
 from src.ConvNet.utils import standardize, make_one_hot_vector, train
@@ -10,15 +10,14 @@ from src.ConvNet.utils import standardize, make_one_hot_vector, train
 class Model:
     EPSILON = 1e-10
 
-    def __init__(self, actuators, layers_list, loss):
+    def __init__(self, layers_list, loss):
         self._loss = loss
-        self.actuators = actuators
         self.layers_list = [InputLayer()] + layers_list
 
         self._ctx_list = [Context() for _ in range(len(layers_list) + 1)]
         self._ctx_loss = Context()
 
-        self.params = [(layer.w, layer.b) for layer in self.layers_list]
+        self.params = [(layer.w, layer.b) for layer in self.layers_list if isinstance(layer,LayerBase)]
 
         self.dz = None
 
@@ -55,16 +54,18 @@ class Model:
 def make_example_net():
     input_size = 784
     layer_sizes = [200, 10]
-    actuators = [relu, softmax]
 
     loss = MSELoss()
 
-    layers_list = [FullyConnectedLayer(actuators[0], (input_size, layer_sizes[0]))]
+    activation_list = [ReLu, ReLu]
+
+    layers_list = [FullyConnectedLayer((input_size, layer_sizes[0]))]
     for layer_number in range(1, len(layer_sizes)):
         current_layer_size = (layer_sizes[layer_number - 1], layer_sizes[layer_number])
-        layers_list.append(FullyConnectedLayer(actuators[layer_number], current_layer_size))
+        layers_list.append(FullyConnectedLayer(current_layer_size))
+        layers_list.append(activation_list[layer_number]())
 
-    neural_network = Model(actuators, layers_list, loss=loss)
+    neural_network = Model(layers_list, loss=loss)
     return neural_network
 
 
@@ -95,7 +96,7 @@ def main():
 
     batch_size = 4096
     epochs = 100  # Irrelevant to RL
-    train(x, y, model=model, epochs=epochs, batch_size=batch_size, optimizer=optimizer, do_grad_check=False)
+    train(x, y, model=model, epochs=epochs, batch_size=batch_size, optimizer=optimizer, do_grad_check=True)
 
 
 if __name__ == '__main__':

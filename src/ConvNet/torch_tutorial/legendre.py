@@ -29,7 +29,7 @@ class LegendrePolynomial3(torch.autograd.Function):
         with respect to the output, and we need to compute the gradient of the loss
         with respect to the input.
         """
-        input, = ctx.saved_tensors
+        input, = ctx._saved_tensors
         return grad_output * 1.5 * (5 * input ** 2 - 1)
 
 

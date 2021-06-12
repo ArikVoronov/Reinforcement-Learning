@@ -5,12 +5,14 @@ import numpy as np
 
 class LossBase(ABC):
     def __init__(self):
+        self.grad_required = False
         pass
 
     @abstractmethod
-    def forward(self, ctx, x, target):
+    def forward(self, ctx, layer_input, target):
         pass
 
+    @abstractmethod
     def backward(self, ctx):
         pass
 
@@ -27,7 +29,7 @@ class MSELoss(LossBase):
         return loss
 
     def backward(self, ctx):
-        layer_input, target = ctx.saved_tensors
+        layer_input, target = ctx.get_saved_tensors()
         grad = 2 * (layer_input - target) / (layer_input.shape[0] * layer_input.shape[1])
         return grad
 

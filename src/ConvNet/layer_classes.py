@@ -1,19 +1,30 @@
 from abc import ABC, abstractmethod
 
-from src.ConvNet.utils import dz_pool
 import numpy as np
+
+from src.ConvNet.utils import dz_pool
+
 
 class Context:
     def __init__(self):
-        self.saved_tensors = list()
+        self._saved_tensors = list()
 
     def save_for_backward(self, *args):
-        self.saved_tensors = list()
+        self._saved_tensors = list()
         for arg in args:
-            self.saved_tensors.append(arg)
+            self._saved_tensors.append(arg)
+
+    def get_saved_tensors(self):
+        if len(self._saved_tensors)==1:
+            return self._saved_tensors[0]
+        else:
+            return self._saved_tensors
 
 
 class LayerBase(ABC):
+    def __init__(self):
+        self.grad_required = True
+
     @abstractmethod
     def forward(self, ctx, layer_input):
         pass
@@ -25,6 +36,8 @@ class LayerBase(ABC):
 
 class InputLayer(LayerBase):
     def __init__(self):
+        super(InputLayer, self).__init__()
+        self.grad_required = False
         self.w = []
         self.b = []
         self.dw = None
@@ -38,9 +51,9 @@ class InputLayer(LayerBase):
 
 
 class FullyConnectedLayer(LayerBase):
-    def __init__(self, actuator, layer_sizes):
+    def __init__(self, layer_sizes):
+        super(FullyConnectedLayer, self).__init__()
         # layer_sizes is a list, ls[1] is self length, ls[0] is previous layer
-        self.actuator = actuator
         if type(layer_sizes[0]) == list:
             layer_sizes[0] = np.prod(layer_sizes[0])
         self.ls = layer_sizes
@@ -58,25 +71,21 @@ class FullyConnectedLayer(LayerBase):
     def forward(self, ctx, layer_input):
         if len(layer_input.shape) > 2:
             layer_input = layer_input.reshape(self.ls[0], -1)
-        z = np.dot(self.w, layer_input) + self.b
-        layer_output = self.actuator(z, derive=0)
-        ctx.save_for_backward(layer_input, z)
+        layer_output = np.dot(self.w, layer_input) + self.b
+        ctx.save_for_backward(layer_input)
         return layer_output
 
-    def backward(self, ctx, grad_output):
+    def backward(self, ctx: Context, grad_output):
         # dz [L] : w[L+1],dz[L+1],z[L],a[L-1]
-        layer_input, z = ctx.saved_tensors
+        layer_input = ctx.get_saved_tensors()
         if len(layer_input.shape) > 2:
             layer_input = layer_input.reshape(self.ls[0], -1)
-        m = z.shape[1]
 
-        activation_grad = self.actuator(z, derive=1) * grad_output
-
-        db = np.sum(activation_grad, axis=1).reshape(self.b.shape[0], 1)
-        dw = np.dot(activation_grad, layer_input.T)
+        db = np.sum(grad_output, axis=1).reshape(self.b.shape[0], 1)
+        dw = np.dot(grad_output, layer_input.T)
         self.dw = dw
         self.db = db
-        dz = np.dot(self.w.T, activation_grad)
+        dz = np.dot(self.w.T, grad_output)
         return dz
 
 
@@ -175,7 +184,7 @@ class MaxPoolLayer(LayerBase):
     def backward(self, ctx, grad_output):
         # dz [L] : w[L+1],dz[L+1],z[L],a[L-1]
 
-        layer_input, z = ctx.saved_tensors
+        layer_input, z = ctx._saved_tensors
 
         if type(self._next_layer) == FullyConnectedLayer:
             # reshape to a column vector (cols = 1)

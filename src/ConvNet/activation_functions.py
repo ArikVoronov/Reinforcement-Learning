@@ -1,85 +1,126 @@
+from abc import ABC, abstractmethod
+
 import numpy as np
 
 
-# %% Activation functions
-def lin_act(z, derive):
-    if derive == 0:
-        y = z
-    elif derive == 1:
-        y = np.ones(z.shape)
-    else:
-        raise ValueError('derive must be 1 or 0')
-    return y
+class ActivationBase(ABC):
+    def __init__(self):
+        self.grad_required = False
+
+    @abstractmethod
+    def forward(self, ctx, layer_input):
+        pass
+
+    @abstractmethod
+    def backward(self, ctx, grad_output):
+        pass
 
 
-def relu(z, derive):
-    if derive == 0:
-        y = z * (z > 0)  # get only the values larger than zero and normalize them
-    elif derive == 1:
-        y = np.array(z > 0,dtype=float)  # get only the values larger than zero and normalize them
-    else:
-        raise ValueError('derive must be 1 or 0')
-    return y
+class LinearActivation(ActivationBase):
+    def __init__(self):
+        super(LinearActivation, self).__init__()
+
+    def forward(self, ctx, layer_input):
+        output = layer_input
+        ctx.save_for_backward(layer_input)
+        return output
+
+    def backward(self, ctx, grad_output):
+        layer_input = ctx.get_saved_tensors()
+        grad = np.ones(layer_input.shape) * grad_output
+        return grad
 
 
-def relu2(z, derive):
-    if derive == 0:
-        y = z * (z <= 0) * 0.1 + z * (z > 0)
-    elif derive == 1:
-        y = 0.1 * (z <= 0) + (z > 0)
-    else:
-        raise ValueError('derive must be 1 or 0')
-    return y
+class ReLu(ActivationBase):
+
+    def __init__(self):
+        super(ReLu, self).__init__()
+
+    def forward(self, ctx, layer_input):
+        output = layer_input * (layer_input > 0)
+
+        ctx.save_for_backward(layer_input)
+        return output
+
+    def backward(self, ctx, grad_output):
+        layer_input = ctx.get_saved_tensors()
+        grad = np.array(layer_input > 0, dtype=float)
+        grad = grad_output * grad
+        return grad
 
 
-def relu3(z, derive):
-    y = np.zeros_like(z)
-    if derive == 0:
-        y[z <= 0] = z * 0.1 + z * (z > 0)
-        y[z > 0] = z * (z > 0)
-    elif derive == 1:
-        y = 0.1 * (z <= 0) + (z > 0)
-    else:
-        raise ValueError('derive must be 1 or 0')
-    return y
+class ReLu2(ActivationBase):
+
+    def __init__(self):
+        super(ReLu2, self).__init__()
+
+    def forward(self, ctx, layer_input):
+        output = layer_input * (layer_input <= 0) * 0.1 + layer_input * (layer_input > 0)
+
+        ctx.save_for_backward(layer_input)
+        return output
+
+    def backward(self, ctx, grad_output):
+        layer_input = ctx.get_saved_tensors()
+        grad = 0.1 * (layer_input <= 0) + (layer_input > 0)
+        grad = grad_output * grad
+        return grad
 
 
-def softmax_old(z, derive):
-    e_sum = np.sum(np.exp(z), axis=0)
-    a = np.exp(z) / e_sum
-    if derive == 0:
-        y = a
-    elif derive == 1:
-        y = a * (1 - a)
-    else:
-        raise ValueError('derive must be 1 or 0')
-    return y
+class Softmax(ActivationBase):
+
+    def __init__(self):
+        super(Softmax, self).__init__()
+
+    def forward(self, ctx, layer_input):
+        e = np.exp(layer_input)
+        e_sum = np.sum(e, axis=0)
+        output = e / e_sum
+
+        ctx.save_for_backward(layer_input, output)
+        return output
+
+    def backward(self, ctx, grad_output):
+        layer_input, output = ctx.get_saved_tensors()
+
+        for i, j in range(output.shape[0]):
+            grad = 1
+        return grad
 
 
-def softmax(z, derive):
-    e = np.exp(z)
-    e_sum = np.sum(e, axis=0)
-    a = e / e_sum
-    if derive == 0:
-        y = a
-    elif derive == 1:
-        y = a * (1 - a)
-    else:
-        raise ValueError('derive must be 1 or 0')
-    return y
+# def softmax_old(z, derive):
+#     e_sum = np.sum(np.exp(z), axis=0)
+#     a = np.exp(z) / e_sum
+#     if derive == 0:
+#         y = a
+#     elif derive == 1:
+#         y = a * (1 - a)
+#     else:
+#         raise ValueError('derive must be 1 or 0')
+#     return y
 
 
+# def softmax(z, derive):
+#     e = np.exp(z)
+#     e_sum = np.sum(e, axis=0)
+#     a = e / e_sum
+#     if derive == 0:
+#         y = a
+#     elif derive == 1:
+#         y = a * (1 - a)
+#     else:
+#         raise ValueError('derive must be 1 or 0')
+#     return y
 
 
 def square(z, derive):
     if derive == 0:
-        y = z**2
+        y = z ** 2
     elif derive == 1:
-        y = 2*z
+        y = 2 * z
     else:
         raise ValueError('derive must be 1 or 0')
     return y
-
 
 
 def softplus(z, derive):
@@ -88,7 +129,6 @@ def softplus(z, derive):
     elif derive == 1:
         y = 1 / (np.exp(-z) + 1)
     return y
-
 
 
 def actor_cont_actuator(z, derive):

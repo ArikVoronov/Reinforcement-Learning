@@ -192,7 +192,7 @@ def grad_check(model, x_batch, y_batch):
     eps = 1e-6
     i = 2
     j = 1
-    L = -1
+    L = -2
     model.layers_list[L].w[i, j] -= eps
     y_pred_1 = model(x_batch)
     model.layers_list[L].w[i, j] += eps
@@ -229,7 +229,7 @@ def train(x, y, model, epochs, optimizer, batch_size=None, do_grad_check=False):
             y_pred = model(x_batch)
             current_loss = model.calculate_loss(y_batch, y_pred)
 
-            model.backward(y_batch, y_pred)
+            model.backward()
             if do_grad_check:
                 grad_check(model, x_batch, y_batch)
 
