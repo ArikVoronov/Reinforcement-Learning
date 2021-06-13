@@ -83,8 +83,21 @@ class Softmax(ActivationBase):
     def backward(self, ctx, grad_output):
         layer_input, output = ctx.get_saved_tensors()
 
-        for i, j in range(output.shape[0]):
-            grad = 1
+        number_of_classes = output.shape[0]
+        number_of_samples = output.shape[1]
+
+        layer_grad = np.zeros(shape=(number_of_classes, number_of_classes, number_of_samples))
+
+        for i in range(number_of_classes):
+            for j in range(number_of_classes):
+                if i == j:
+                    layer_grad[i, j, :] = output[j, :] * (1 - output[i, :])
+                else:
+                    layer_grad[i, j, :] = - output[j, :] * output[i, :]
+
+        grad = np.empty_like(layer_input)
+        for i in range(number_of_classes):
+            grad[i, :] = np.sum(layer_grad[i, :, :] * grad_output, axis=0)
         return grad
 
 

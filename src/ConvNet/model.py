@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.ConvNet.activation_functions import ReLu
+from src.ConvNet.activation_functions import ReLu,Softmax
 from src.ConvNet.layer_classes import FullyConnectedLayer, Context, InputLayer, LayerBase
 from src.ConvNet.losses import MSELoss
 from src.ConvNet.optim import SGD
@@ -56,7 +56,7 @@ def make_example_net():
 
     loss = MSELoss()
 
-    activation_list = [ReLu, ReLu]
+    activation_list = [ReLu, Softmax]
 
     layers_list = [FullyConnectedLayer((input_size, layer_sizes[0]))]
     for layer_number in range(1, len(layer_sizes)):
@@ -85,7 +85,7 @@ def main():
     y = np.rollaxis(y, axis=1)
 
     # Training parameters
-    learning_rate = 0.01
+    learning_rate = 0.1
     beta1 = 0.95  # Step weighted average parameter
     beta2 = 0.999  # Step normalization parameter
     lam = 0  # 1e-5  # Regularization parameter
@@ -94,8 +94,8 @@ def main():
     optimizer = SGD(layers=model.layers_list, learning_rate=learning_rate)
 
     batch_size = 4096
-    epochs = 100  # Irrelevant to RL
-    train(x, y, model=model, epochs=epochs, batch_size=batch_size, optimizer=optimizer, do_grad_check=True)
+    epochs = 1000  # Irrelevant to RL
+    train(x, y, model=model, epochs=epochs, batch_size=batch_size, optimizer=optimizer, do_grad_check=False)
 
 
 if __name__ == '__main__':
