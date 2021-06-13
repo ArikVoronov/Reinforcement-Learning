@@ -1,13 +1,13 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.optim as optim
 
 import torchvision
 import torchvision.transforms as transforms
 from tqdm import tqdm
 
 DATA_ROOT = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\data'
-
 
 
 class Net(nn.Module):
@@ -21,6 +21,7 @@ class Net(nn.Module):
         # self.fc3 = nn.Linear(84, 10)
         self.fc1 = nn.Linear(28 * 28, 20)
         self.fc2 = nn.Linear(20, 10)
+        self.activation = nn.LogSoftmax()
 
     def forward(self, x):
         # x = self.pool(F.relu(self.conv1(x)))
@@ -29,13 +30,9 @@ class Net(nn.Module):
         x = F.relu(self.fc1(x))
         # x = F.relu(self.fc2(x))
         x = self.fc2(x)
-        x = F.softmax(x)
+        # x = self.activation(x)
         return x
 
-
-
-
-import torch.optim as optim
 
 
 if __name__ == '__main__':
@@ -67,22 +64,22 @@ if __name__ == '__main__':
 
     net = Net()
 
-    # criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(reduction='mean')
     # criterion = nn.NLLLoss(reduction='mean')
-    criterion = nn.MSELoss(reduction='mean')
-    optimizer = optim.SGD(net.parameters(), lr=1)
+    # criterion = nn.MSELoss(reduction='mean')
+    optimizer = optim.SGD(net.parameters(), lr=0.1)
 
     # Train
     for epoch in range(10):  # loop over the dataset multiple times
 
         running_loss = 0.0
         pbar = tqdm(enumerate(trainloader, 0))
-        for i, data in pbar:
+        for batch_number, data in pbar:
             # get the inputs; data is a list of [inputs, labels]
             inputs, labels = data
             inputs = inputs.reshape(-1, 784)
-            labels = F.one_hot(labels)
-            labels = labels.float()
+            # labels = F.one_hot(labels)
+            # labels = labels.float()
             # zero the parameter gradients
             optimizer.zero_grad()
 
@@ -93,12 +90,15 @@ if __name__ == '__main__':
             optimizer.step()
 
             # print statistics
-            running_loss += loss.item()
-            a_labels = torch.argmax(labels, axis=1)
+            current_loss = loss.item()
+            running_loss += current_loss
+            # a_labels = torch.argmax(labels, axis=1)
+            a_labels = labels
             accuracy = torch.mean(
                 torch.as_tensor(a_labels == torch.argmax(outputs, axis=1), dtype=torch.float)).numpy()
 
-            pbar.desc = '[%d, %5d] loss: %.3f,accuracy %.f' % (epoch + 1, i + 1, loss.item(), accuracy * 100)
+            # pbar.desc = '[%d, %5d] loss: %.3f,accuracy %.f' % (epoch + 1, batch_number + 1, loss.item(), accuracy * 100)
+            pbar.desc = f'[{epoch + 1:3d},{batch_number + 1:3d}];  loss {current_loss:.3f}; accuracy {accuracy * 100:.3f}'
 
             running_loss = 0.0
 

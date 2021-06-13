@@ -69,11 +69,16 @@ class ReLu2(ActivationBase):
 
 class Softmax(ActivationBase):
 
-    def __init__(self):
+    def __init__(self, subtract_max=True):
         super(Softmax, self).__init__()
+        self._subtract_max = subtract_max
 
     def forward(self, ctx, layer_input):
-        e = np.exp(layer_input)
+        if self._subtract_max:
+            e = np.exp(layer_input - np.max(layer_input, axis=0))
+        else:
+            e = np.exp(layer_input)
+
         e_sum = np.sum(e, axis=0)
         output = e / e_sum
 

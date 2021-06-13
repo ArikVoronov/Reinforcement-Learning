@@ -7,6 +7,12 @@ def rms(x, ax=None, kdims=False):
     return y
 
 
+def squish_range(x):
+    x = x - np.min(x)
+    x = x / np.max(x)
+    return x
+
+
 def normalize(x, mean, std):
     x = (x - mean) / std
     return x
@@ -34,7 +40,7 @@ def grad_check(model, x_batch, y_batch):
     eps = 1e-6
     i = 2
     j = 1
-    L = -2
+    L = -4
     model.layers_list[L].w[i, j] -= eps
     y_pred_1 = model(x_batch)
     model.layers_list[L].w[i, j] += eps
@@ -44,8 +50,7 @@ def grad_check(model, x_batch, y_batch):
     dw_approx = (cost2 - cost1) / (eps)
     dw_net = model.layers_list[L].dw[i, j]
     error = (dw_approx - dw_net) / (np.abs(dw_approx) + np.abs(dw_net) + eps)
-    print(f'dw aprx {dw_approx}; dw net {dw_net}')
-    print('grad check error {:1.3f}%'.format(error * 100))
+    print(f'dw aprx {dw_approx:3.3f}; dw net {dw_net:3.3f}; grad check error {error * 100:1.1f}%')
     return dw_approx
 
 
@@ -82,8 +87,8 @@ def train(x, y, model, epochs, optimizer, batch_size=None, do_grad_check=False):
 
             a_y_pred = np.argmax(y_pred, axis=0)
             a_y_true = np.argmax(y_batch, axis=0)
-            accuracy = np.mean(a_y_true == a_y_pred, axis=0) * 100
-            pbar.desc = f'[{epoch:3d},{batch_number + 1:3d}];  loss {current_loss:.3f}; accuracy {accuracy:.3f}; learning_rate {optimizer.learning_rate}'
+            accuracy = np.mean(a_y_true == a_y_pred, axis=0)
+            pbar.desc = f'[{epoch + 1:3d},{batch_number + 1:3d}];  loss {current_loss:.3f}; accuracy {accuracy * 100:.3f}; learning_rate {optimizer.learning_rate}'
 
         # end batches
         last_cost_mean = np.mean(loss_list[-batches:])

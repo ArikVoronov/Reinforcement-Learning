@@ -54,21 +54,28 @@ class FullyConnectedLayer(LayerBase):
         # layer_sizes is a list, ls[1] is self length, ls[0] is previous layer
         if type(layer_sizes[0]) == list:
             layer_sizes[0] = np.prod(layer_sizes[0])
-        self.ls = layer_sizes
+        self.layer_sizes = layer_sizes
         self.dw = None
         self.db = None
         self._initialize_weights()
 
     def _initialize_weights(self):
-        signs = (2 * np.random.randint(0, 2, size=self.ls[1] * self.ls[0]) - 1).reshape(self.ls[1], self.ls[0])
-        var = np.sqrt(2 / self.ls[1])
-        self.w = var * 1 * signs * (np.random.randint(10, 1e2, size=self.ls[1] * self.ls[0]) / 1e2).reshape(
-            [self.ls[1], self.ls[0]])
-        self.b = np.zeros([self.ls[1], 1])
+        signs = (2 * np.random.randint(0, 2, size=self.layer_sizes[1] * self.layer_sizes[0]) - 1).reshape(
+            self.layer_sizes[1], self.layer_sizes[0])
+        var = np.sqrt(2 / self.layer_sizes[1])
+
+        self.w = var * 1 * signs * (
+                    np.random.randint(10, 1e2, size=self.layer_sizes[1] * self.layer_sizes[0]) / 1e2).reshape(
+            [self.layer_sizes[1], self.layer_sizes[0]])
+
+        bound = 1 / np.sqrt(self.layer_sizes[1])
+        self.w = bound * 2 * (np.random.rand(self.layer_sizes[1], self.layer_sizes[0]) - 0.5)
+
+        self.b = np.zeros([self.layer_sizes[1], 1])
 
     def forward(self, ctx, layer_input):
         if len(layer_input.shape) > 2:
-            layer_input = layer_input.reshape(self.ls[0], -1)
+            layer_input = layer_input.reshape(self.layer_sizes[0], -1)
         layer_output = np.dot(self.w, layer_input) + self.b
         ctx.save_for_backward(layer_input)
         return layer_output
@@ -76,7 +83,7 @@ class FullyConnectedLayer(LayerBase):
     def backward(self, ctx: Context, grad_output):
         layer_input = ctx.get_saved_tensors()
         if len(layer_input.shape) > 2:
-            layer_input = layer_input.reshape(self.ls[0], -1)
+            layer_input = layer_input.reshape(self.layer_sizes[0], -1)
 
         db = np.sum(grad_output, axis=1).reshape(self.b.shape[0], 1)
         dw = np.dot(grad_output, layer_input.T)

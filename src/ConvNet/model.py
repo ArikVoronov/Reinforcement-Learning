@@ -1,10 +1,10 @@
 import numpy as np
 
-from src.ConvNet.activation_functions import ReLu,Softmax
+from src.ConvNet.activation_functions import ReLu, Softmax, LinearActivation
 from src.ConvNet.layer_classes import FullyConnectedLayer, Context, InputLayer, LayerBase
-from src.ConvNet.losses import MSELoss
+from src.ConvNet.losses import NLLoss, MSELoss
 from src.ConvNet.optim import SGD
-from src.ConvNet.utils import standardize, make_one_hot_vector, train
+from src.ConvNet.utils import make_one_hot_vector, train, normalize, squish_range
 
 
 class Model:
@@ -52,13 +52,11 @@ class Model:
 
 def make_example_net():
     input_size = 784
-    layer_sizes = [200, 10]
+    layer_sizes = [20, 10]
 
-    loss = MSELoss()
-
+    loss = NLLoss()
     activation_list = [ReLu, Softmax]
-
-    layers_list = [FullyConnectedLayer((input_size, layer_sizes[0]))]
+    layers_list = [FullyConnectedLayer((input_size, layer_sizes[0])), activation_list[0]()]
     for layer_number in range(1, len(layer_sizes)):
         current_layer_size = (layer_sizes[layer_number - 1], layer_sizes[layer_number])
         layers_list.append(FullyConnectedLayer(current_layer_size))
@@ -79,7 +77,9 @@ def main():
     y = y.numpy()
     x = x.reshape(x.shape[0], -1)
     x = np.rollaxis(x, axis=1)
-    x, _, _ = standardize(x)
+    # x, _, _ = standardize(x)
+    x = squish_range(x)
+    x = normalize(x, 0.5, 0.5)
 
     y = make_one_hot_vector(y, classes=10)
     y = np.rollaxis(y, axis=1)
@@ -94,7 +94,7 @@ def main():
     optimizer = SGD(layers=model.layers_list, learning_rate=learning_rate)
 
     batch_size = 4096
-    epochs = 1000  # Irrelevant to RL
+    epochs = 20  # Irrelevant to RL
     train(x, y, model=model, epochs=epochs, batch_size=batch_size, optimizer=optimizer, do_grad_check=False)
 
 
