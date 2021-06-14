@@ -36,7 +36,7 @@ if __name__ == '__main__':
     # Build Env
     track = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\src\Envs\Tracks\tracky.pkl'
     env = TrackRunner.TrackRunnerEnv(run_velocity=0.02, turn_degrees=20, track=track, max_steps=100)
-    env = Pong.PongEnv(ball_speed=0.02, left_paddle_speed=0.02, right_paddle_speed=0.01, games_per_match=10)
+    # env = Pong.PongEnv(ball_speed=0.02, left_paddle_speed=0.02, right_paddle_speed=0.01, games_per_match=10)
 
     # env= envs.Pong()
 
@@ -49,19 +49,17 @@ if __name__ == '__main__':
     #                                                     featurize=None,
     #                                                     saveFile=None)
     q_net_apx = setup_neural_net_apx(state_dimension=env.state_vector_dimension, number_of_actions=3,
-                                     learning_rate=1e-3,
-                                     featurize=None,
                                      save_file=save_file)
     # decoupled_network = DecoupledNN(learningRate=5e-4, batchSize=500, batches=20, maxEpochs=100,
     #                                 netLanes=env.number_of_actions, layerSizes=[200],
     #                                 inputSize=env.state_vector_dimension,
     #                                 activationFunctions=[[], relu2, softmax])
-    if save_file is None:
-        nullify_qs(q_net_apx, env)
+    # if save_file is None:
+    #     nullify_qs(q_net_apx, env)
 
     # RL Optimization
     output_dir_path = 'F:\\My Documents\\Study\\Programming\\PycharmProjects\\Reinforcement-Learning\\output'
-    max_episodes = 2000
+    max_episodes = 5000
     # List of classifiers to train
 
     clfs = [
@@ -71,13 +69,13 @@ if __name__ == '__main__':
         ##        TDL_Linear.CLF(linApx,env,rewardDiscount = 0.95,lam = 0,epsilon = 0.3,epsilonDecay = 0.95,
         ##            maxEpisodes = maxEpisodes , printoutEps = 100),
 
-        DQN.CLF(q_net_apx, env, rewardDiscount=0.95, epsilon=0.3, epsilonDecay=0.95,
-                maxEpisodes=max_episodes, printoutEps=10, featurize=None,
-                experienceCacheSize=100, experienceBatchSize=10, QCopyEpochs=50),
+        # DQN.CLF(q_net_apx, env, rewardDiscount=0.95, epsilon=0.3, epsilonDecay=0.95,
+        #         maxEpisodes=max_episodes, printoutEps=10, featurize=None,
+        #         experienceCacheSize=100, experienceBatchSize=10, QCopyEpochs=50),
 
-        # QL.CLF(q_net_apx, number_of_actions=env.number_of_actions, reward_discount=0.95, epsilon=0.3,
-        #        epsilon_decay=0.95,
-        #        max_episodes=max_episodes, printout_episodes=10, featurize=None, output_dir_path=output_dir_path)
+        QL.CLF(q_net_apx, model_learning_rate= 0.01,number_of_actions=env.number_of_actions, reward_discount=0.95, epsilon=0.3,
+               epsilon_decay=0.95,
+               max_episodes=max_episodes, printout_episodes=50, featurize=None, output_dir_path=output_dir_path)
     ]
 
     # Training

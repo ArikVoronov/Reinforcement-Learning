@@ -21,7 +21,7 @@ class Context:
 
 class LayerBase(ABC):
     def __init__(self):
-        self.grad_required = True
+        self.grad_required = False
 
     @abstractmethod
     def forward(self, ctx, layer_input):
@@ -30,6 +30,12 @@ class LayerBase(ABC):
     @abstractmethod
     def backward(self, ctx, output):
         pass
+
+    def set_parameters(self, parameters_list):
+        pass
+
+    def get_parameters(self):
+        return []
 
 
 class InputLayer(LayerBase):
@@ -51,6 +57,7 @@ class InputLayer(LayerBase):
 class FullyConnectedLayer(LayerBase):
     def __init__(self, layer_sizes):
         super(FullyConnectedLayer, self).__init__()
+        self.grad_required = True
         # layer_sizes is a list, ls[1] is self length, ls[0] is previous layer
         if type(layer_sizes[0]) == list:
             layer_sizes[0] = np.prod(layer_sizes[0])
@@ -65,7 +72,7 @@ class FullyConnectedLayer(LayerBase):
         var = np.sqrt(2 / self.layer_sizes[1])
 
         self.w = var * 1 * signs * (
-                    np.random.randint(10, 1e2, size=self.layer_sizes[1] * self.layer_sizes[0]) / 1e2).reshape(
+                np.random.randint(10, 1e2, size=self.layer_sizes[1] * self.layer_sizes[0]) / 1e2).reshape(
             [self.layer_sizes[1], self.layer_sizes[0]])
 
         bound = 1 / np.sqrt(self.layer_sizes[1])
@@ -91,3 +98,10 @@ class FullyConnectedLayer(LayerBase):
         self.db = db
         dz = np.dot(self.w.T, grad_output)
         return dz
+
+    def set_parameters(self, parameters_list):
+        self.w = parameters_list[0]
+        self.b = parameters_list[1]
+
+    def get_parameters(self):
+        return [self.w, self.b]

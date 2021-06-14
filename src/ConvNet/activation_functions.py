@@ -1,22 +1,9 @@
 from abc import ABC, abstractmethod
-
+from src.ConvNet.layer_classes import LayerBase
 import numpy as np
 
 
-class ActivationBase(ABC):
-    def __init__(self):
-        self.grad_required = False
-
-    @abstractmethod
-    def forward(self, ctx, layer_input):
-        pass
-
-    @abstractmethod
-    def backward(self, ctx, grad_output):
-        pass
-
-
-class LinearActivation(ActivationBase):
+class LinearActivation(LayerBase):
     def __init__(self):
         super(LinearActivation, self).__init__()
 
@@ -31,7 +18,7 @@ class LinearActivation(ActivationBase):
         return grad
 
 
-class ReLu(ActivationBase):
+class ReLu(LayerBase):
 
     def __init__(self):
         super(ReLu, self).__init__()
@@ -49,7 +36,7 @@ class ReLu(ActivationBase):
         return grad
 
 
-class ReLu2(ActivationBase):
+class ReLu2(LayerBase):
 
     def __init__(self):
         super(ReLu2, self).__init__()
@@ -67,7 +54,7 @@ class ReLu2(ActivationBase):
         return grad
 
 
-class Softmax(ActivationBase):
+class Softmax(LayerBase):
 
     def __init__(self, subtract_max=True):
         super(Softmax, self).__init__()

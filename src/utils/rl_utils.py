@@ -4,7 +4,10 @@ import sklearn.preprocessing
 from sklearn.kernel_approximation import RBFSampler
 
 import src.Regressors.LinearReg as LinearReg
-from src.ConvNet.activation_functions import relu2, lin_act
+from src.ConvNet.activation_functions import ReLu2, Softmax
+from src.ConvNet.layer_classes import FullyConnectedLayer
+from src.ConvNet.losses import NLLoss, MSELoss
+
 from src.ConvNet.model import Model
 
 
@@ -57,19 +60,6 @@ def one_hot(scalar, vector_size):
     return ohv
 
 
-def softmax(z, derive):
-    e = np.exp(z - np.max(z))
-    e_sum = np.sum(e, axis=0)
-    a = e / e_sum
-    if derive == 0:
-        y = a
-    elif derive == 1:
-        y = a * (1 - a)
-    else:
-        raise Exception()
-    return y
-
-
 # Featurizer
 def create_featurizer(env):
     """
@@ -104,43 +94,29 @@ def create_featurizer(env):
     return featurize_state
 
 
-def setup_neural_net_apx(state_dimension, number_of_actions, learning_rate, featurize=None, save_file=None):
-    def initialize_network(x, y):
-        # Define Neural Network policy approximator
-        # Hyper parameters
-        epochs = 10  # Irrelevant to RL
-        tolerance = 1e-5  # Irrelevant to RL
-        layer_parameters = [[50]]
-        layer_types = ['fc']
-        actuators = [[0], relu2, lin_act]
-        learning_rate = None  # Learning rate, this is just a temporary placeholder, the actual value is defined in the main loop
-        beta1 = 0.9  # Step weighted average parameter
-        beta2 = 0.99  # Step normalization parameter
-        epsilon = 1e-8  # Addition to denominator to prevent div by 0
-        lam = 1e-5  # Regularization parameter
-        learning_decay = 1.0
-        neural_net = Model(epochs, tolerance, actuators, layer_parameters, layer_types,
-                           learning_rate, beta1, beta2, epsilon, lam, learning_decay=learning_decay,
-                           cost_function_type='L2')
-        neural_net.setup_layer_sizes(x, y)
-        return neural_net
+def setup_neural_net_apx(state_dimension, number_of_actions, save_file=None):
+    def initialize_network():
+        input_size = state_dimension
+        layer_sizes = [50, number_of_actions]
 
-    # Setup neural network policy approximator
-    y = np.zeros([number_of_actions, 1])  # Required to intialize weights
-    state = np.zeros([state_dimension, 1])  # Required to intialize weights
-    if featurize is None:
-        featurize = lambda x: x
-    else:
-        featurize = featurize
-    state = featurize(state).reshape([-1, 1])
-    network = initialize_network(state, y)
-    network.initialize_weights()
+        loss = MSELoss()
+        activation_list = [ReLu2, ReLu2]
+        layers_list = [FullyConnectedLayer((input_size, layer_sizes[0])), activation_list[0]()]
+        for layer_number in range(1, len(layer_sizes)):
+            current_layer_size = (layer_sizes[layer_number - 1], layer_sizes[layer_number])
+            layers_list.append(FullyConnectedLayer(current_layer_size))
+            layers_list.append(activation_list[layer_number]())
+
+        neural_network = Model(layers_list, loss=loss)
+        return neural_network
+
+    network = initialize_network()
     if save_file is not None:
         # Unpickle -  Data = [wv,bv]
         network.load_model_weights(save_file)
         print('\nVariables loaded from ' + save_file)
-    network.learning_rate = learning_rate
     return network
+
 
 class NeuralNetworkAgent:
     def __init__(self, apx):
@@ -150,8 +126,8 @@ class NeuralNetworkAgent:
         self.q_approximator.load_model_weights(weights_file_path)
 
     def pick_action(self, state):
-        a, z = self.q_approximator.forward(state)
-        q = a[-1]
+        a = self.q_approximator(state)
+        q = a
         q = q.squeeze()
         best_action = np.argwhere(q == np.amax(q))
         return best_action

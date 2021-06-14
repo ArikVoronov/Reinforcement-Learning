@@ -73,18 +73,18 @@ def train(x, y, model, epochs, optimizer, batch_size=None, do_grad_check=False):
 
             optimizer.zero_grad()
 
+            # Forward pass
             y_pred = model(x_batch)
             current_loss = model.calculate_loss(y_batch, y_pred)
 
+            # Backward pass
             model.backward()
             if do_grad_check:
                 grad_check(model, x_batch, y_batch)
+            optimizer.step()
 
-            t_tot = ((epoch + 1) * batch_number + 1)  # batch_number paramater for average correction
-            optimizer.step(t_tot)
-
+            # Metrics
             loss_list.append(current_loss)
-
             a_y_pred = np.argmax(y_pred, axis=0)
             a_y_true = np.argmax(y_batch, axis=0)
             accuracy = np.mean(a_y_true == a_y_pred, axis=0)

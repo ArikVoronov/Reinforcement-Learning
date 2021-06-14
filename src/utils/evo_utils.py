@@ -5,20 +5,18 @@ from src.ConvNet.model import *
 
 
 class EvoAgent:
-    def __init__(self, net):
-        self.net = net
+    def __init__(self, model):
+        self.model = model
 
     def pick_action(self, state):
-        a, _ = self.net.forward(state)
-        action = np.argmax(a[-1])
+        a = self.model(state)
+        action = np.argmax(a)
         return action
 
 
 def evo_fitness_function(env, agent):
     def agent_fitness(gen):
-        half_gen = int(len(gen) / 2)
-        agent.model.wv = gen[0:half_gen]
-        agent.model.bv = gen[half_gen:]
+        agent.model.set_parameters(gen)
         state = env.reset()
         total_reward = 0
         done = False
@@ -67,11 +65,11 @@ class GAOptimizer:
     @staticmethod
     def calculate_mean(best_genes):
         # Calculate the total mean of each variable (out of the survivors)
-        mean_list = []
+        mean_g = 0
         for gene in best_genes:
-            meanies = [np.mean(var) for var in gene]
-            mean_list += [meanies]
-        mean_g = np.mean(np.array(mean_list), axis=0)
+            for var in gene:
+                mean_g += np.mean([np.mean(subvar) for subvar in var])
+
         return mean_g
 
     def breed_new_generation(self, best_genes):
@@ -109,9 +107,15 @@ class GAOptimizer:
 
     def initialize_generation(self, variable_list):
         # Initialize parameters for optimization
-        generation = []
+        generation = list()
         for i in range(self.specimen_count):
-            generation += [[np.random.random_sample(var.shape) - 0.5 for var in variable_list]]
+            child = list()
+            for var in variable_list:
+                if type(var) == list:
+                    child.append([[np.random.random_sample(subvar.shape) - 0.5] for subvar in var])
+                else:
+                    child.append([np.random.random_sample(var.shape) - 0.5])
+            generation.append(child)
         return generation
 
     def optimize(self, variable_list, fitness_function):

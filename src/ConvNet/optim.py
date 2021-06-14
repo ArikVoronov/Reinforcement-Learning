@@ -6,9 +6,10 @@ import numpy as np
 class OptimizerBase(ABC):
     def __init__(self, layers):
         self.layers = layers
+        self.t = 0
 
     @abstractmethod
-    def step(self, t):
+    def step(self):
         pass
 
     def zero_grad(self):
@@ -19,11 +20,11 @@ class OptimizerBase(ABC):
 
 
 class SGD(OptimizerBase):
-    def __init__(self,learning_rate, *args,**kwargs ):
-        super(SGD, self).__init__( *args,**kwargs)
+    def __init__(self, learning_rate, *args, **kwargs):
+        super(SGD, self).__init__(*args, **kwargs)
         self.learning_rate = learning_rate
 
-    def step(self, t):
+    def step(self):
         for layer in self.layers[1:]:
             if layer.grad_required:
                 layer.w += -self.learning_rate * layer.dw
@@ -53,16 +54,17 @@ class ADAM(OptimizerBase):
             self.vb.append(np.zeros_like(layer.b))
             self.sb.append(np.zeros_like(layer.b))
 
-    def step(self, t):
+    def step(self):
+        self.t += 1
         # print(np.mean(self.vw[1]))
         for layer_number, layer in enumerate(self.layers):
             if layer_number == 0:
                 continue
             layer.w = (1 - self.lam) * layer.w
             self.vw[layer_number], self.sw[layer_number] = self.step_parameter(layer.w, layer.dw, self.vw[layer_number],
-                                                                               self.sw[layer_number], t)
+                                                                               self.sw[layer_number], self.t)
             self.vb[layer_number], self.sb[layer_number] = self.step_parameter(layer.b, layer.db, self.vb[layer_number],
-                                                                               self.sb[layer_number], t)
+                                                                               self.sb[layer_number], self.t)
 
     def step_parameter(self, parameter, delta, v, s, t):
 

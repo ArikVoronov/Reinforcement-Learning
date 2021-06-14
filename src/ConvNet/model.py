@@ -17,9 +17,7 @@ class Model:
         self._ctx_list = [Context() for _ in range(len(self.layers_list))]
         self._ctx_loss = Context()
 
-        self.params = [(layer.w, layer.b) for layer in self.layers_list if isinstance(layer, LayerBase)]
-
-        self.dz = None
+        self.params = [layer.get_parameters() for layer in self.layers_list]
 
     def load_model_weights(self, weights_file_path):
         pass
@@ -48,6 +46,13 @@ class Model:
             dz_temp = self.layers_list[layer_number].backward(self._ctx_list[layer_number], dz[0])
             dz.insert(0, dz_temp)
         dz.insert(0, [0])
+
+    def set_parameters(self, parameters_list):
+        for layer_number in range(len(self.layers_list)):
+            self.layers_list[layer_number].set_parameters(parameters_list[layer_number])
+
+    def get_parameters(self):
+        return self.params
 
 
 def make_example_net():

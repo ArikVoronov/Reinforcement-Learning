@@ -3,14 +3,17 @@ import os
 import pickle
 from datetime import datetime
 import numpy as np
-
+from src.ConvNet.optim import SGD
 
 
 class CLF:
-    def __init__(self, apx, number_of_actions,
+    def __init__(self, apx, number_of_actions,model_learning_rate,
                  reward_discount=0.9, epsilon=0.1, epsilon_decay=1,
                  max_episodes=1000, printout_episodes=None, featurize=None, output_dir_path=None):
         self.q_approximator = copy.deepcopy(apx)
+
+
+        self.optimizer = SGD(layers=self.q_approximator.layers_list, learning_rate=model_learning_rate)
         self.number_of_actions = number_of_actions
         self.reward_discount = reward_discount
         self.epsilon_0 = epsilon
@@ -23,7 +26,6 @@ class CLF:
             self.featurize = lambda x: x
         else:
             self.featurize = featurize
-        self.t = 0
         self.epsilon = self.epsilon_0
         self._output_dir = output_dir_path
         if self._output_dir is not None:
@@ -61,28 +63,32 @@ class CLF:
                                   .format(episode, self.max_episodes, mean_steps, mean_reward))
                             if self._output_dir is not None:
                                 output_file_path = os.path.join(self._output_dir, f'weights_episode_{episode}.pkl')
-                                with open(output_file_path, "wb") as file:
-                                    pickle.dump([self.q_approximator.wv, self.q_approximator.bv], file)
+                                # with open(output_file_path, "wb") as file:
+                                #     pickle.dump([self.q_approximator.wv, self.q_approximator.bv], file)
                     break
 
     def optimize_step(self, state, next_state, reward, action):
-        a, z, q_current = self.get_q(state)
-        y = q_current.copy()
-        _, _, q_next = self.get_q(next_state)
-        y[action] = reward + self.reward_discount * np.max(q_next)
-        dz, dw, db = self.q_approximator.backward(y, a, z,
-                                                  dz_func='Linear/L2')
-        # dzFunc is dL/dz = dL/da*da/dz=self.actuators[-1](z[-1],1)
-        self.t += 1
-        self.q_approximator.optimization_step(dw, db, self.t)
+        self.optimizer.zero_grad()
+        # Forward pass
 
-    def get_q(self, state):
-        a, z = self.q_approximator.forward(state)
-        prediction = a[-1]
-        return a, z, prediction
+        q_next = self.q_approximator(next_state)
+        q_current = self.q_approximator(state) # current after next to save forward context
+        y = q_current.copy()
+        y[action] = reward + self.reward_discount * np.max(q_next)
+
+        # Backward pass
+        self.q_approximator.calculate_loss(y, q_current)
+        self.q_approximator.backward()
+
+        # print()
+        # print(np.sum(self.q_approximator.layers_list[-4].w))
+        self.optimizer.step()
+        # print(np.sum(self.q_approximator.layers_list[-4].w))
 
     def epsilon_policy(self, state):
-        _, _, q = self.get_q(state)
+        q = self.q_approximator(state)
+        if np.isnan(q).any():
+            raise ValueError('q approximation is NaN')
         q = q.squeeze()
         best_action = np.argwhere(q == np.amax(q))  # This gives ALL indices where Q == max(Q)
         action_probabilities = np.ones(self.number_of_actions) * self.epsilon / self.number_of_actions
@@ -91,5 +97,6 @@ class CLF:
 
     def pick_action(self, state):
         action_probability = self.epsilon_policy(state)
+
         action = np.random.choice(self.number_of_actions, p=action_probability)
         return action
