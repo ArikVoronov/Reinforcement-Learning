@@ -1,7 +1,8 @@
+import numpy as np
 from tqdm import tqdm
 
-from src.ConvNet.activation_functions import *
-from src.ConvNet.model import *
+from src.ConvNet.activation_functions import ReLu2
+from src.ConvNet.model import Model
 
 
 class EvoAgent:
@@ -30,7 +31,7 @@ def evo_fitness_function(env, agent):
 
 
 class GAOptimizer:
-    def __init__(self, specimen_count=2000, survivor_count=20, tol=1E-5, max_iterations=300, mutation_rate=0.1,
+    def __init__(self, specimen_count, survivor_count, max_iterations, mutation_rate,
                  generation_method="Random Splice", fitness_cap=None):
         self.specimen_count = specimen_count  # total number of specimenCount to compete
         self.survivor_count = survivor_count  # number of specimenCount to survive each generation
@@ -38,9 +39,8 @@ class GAOptimizer:
             self.specimen_count / self.survivor_count)  # calculated number of children for each survivor
         self.wild_children_count = np.max(
             [int(self.children_count / 10), 1])  # Wild mutation rate - set to 10% but not less than 1
-        self.tol = tol  # tolerance for change in fitness
         self.max_iterations = max_iterations  #
-        self.mutation_rate = mutation_rate  # rate of change with each new generation
+        self.base_mutation_rate = mutation_rate  # rate of change with each new generation
         self.generation_method = generation_method  # Random Splice/ Pure Mutation
 
         self.fitness_cap = fitness_cap
@@ -63,58 +63,91 @@ class GAOptimizer:
         return best_genes, best_fit
 
     @staticmethod
-    def calculate_mean(best_genes):
+    def calculate_gene_var(best_parents):
         # Calculate the total mean of each variable (out of the survivors)
-        mean_g = 0
-        for gene in best_genes:
-            for var in gene:
-                mean_g += np.mean([np.mean(subvar) for subvar in var])
+        number_of_samples = len(best_parents)
+        gene_var = []
+        for gene in best_parents[0]:
+            gene_var.append([0] * len(gene))
 
-        return mean_g
+        for parent in best_parents:
+            for i, gene in enumerate(parent):
+                if type(gene) == list:
+                    if len(gene) == 0:
+                        continue
+                    else:
+                        for j, subvar in enumerate(gene):
+                            gene_var[i][j] += np.std(subvar) / number_of_samples
+                else:
+                    gene_var[i] += np.std(gene) / number_of_samples
 
-    def breed_new_generation(self, best_genes):
+        return gene_var
+
+    @staticmethod
+    def _base_mutation(gene, mutation_rate):
+        mutated_gene = gene + mutation_rate * np.mean(gene) * (
+                np.random.random_sample(gene.shape) - 0.5)
+        return mutated_gene
+
+    @staticmethod
+    def _spliced_mutation(gene, splicing_gene, mutation_rate):
+        mask = np.round(np.random.random_sample(gene.shape))
+        mutated_gene = mask * gene + (1 - mask) * splicing_gene
+        mutated_gene += mutation_rate * np.mean(gene) * (
+                np.random.random_sample(gene.shape) - 0.5)
+        return mutated_gene
+
+    def breed_new_generation(self, best_parents):
         # This function takes the best survivors and breeds a new generation
-        mean_g = self.calculate_mean(best_genes)
-        # Generate new generation from children of survivors
+        gene_var = self.calculate_gene_var(best_parents)
+        # Generate new generation from child of survivors
         new_generation = []
         for s in range(self.survivor_count):
-            current = best_genes[s]
+            current_parent = best_parents[s]
             for c in range(self.children_count):
                 if c >= self.children_count - self.wild_children_count:
                     wild_mutation = (np.random.rand() + 0.1) * 10
                 else:
                     wild_mutation = 1
+                mutation_rate = wild_mutation * self.base_mutation_rate
+                child = list()
                 if self.generation_method == "Pure Mutation":
-                    children = [var +
-                                wild_mutation * self.mutation_rate * mean_g[i] * (
-                                        np.random.random_sample(var.shape) - 0.5)
-                                for i, var in enumerate(current)]
+                    for i, gene in enumerate(current_parent):
+                        if type(gene) is list:
+                            mutated_gene = list()
+                            for j, sub_gene in enumerate(gene):
+                                mutated_gene.append(self._base_mutation(sub_gene, gene_var[i][j]*mutation_rate))
+                        else:
+                            mutated_gene = self._base_mutation(gene, gene_var[i]*mutation_rate)
+                        child.append(mutated_gene)
                 elif self.generation_method == "Random Splice":
-                    children = []
-                    for i, var in enumerate(current):
-                        spliced = np.random.randint(len(best_genes))
-                        mask = np.round(np.random.random_sample(var.shape))
-                        var2 = mask * var + (1 - mask) * best_genes[spliced][i]
-                        var2 += wild_mutation * self.mutation_rate * mean_g[i] * (
-                                np.random.random_sample(var.shape) - 0.5)
-                        children.append(var2)
+                    spliced = np.random.randint(len(best_parents))
+                    splicing_partner = best_parents[spliced]
+                    for i, gene in enumerate(current_parent):
+                        splicing_gene = splicing_partner[i]
+                        mutated_gene = list()
+                        if type(gene) is list:
+                            for j, sub_gene in enumerate(gene):
+                                mutated_gene.append(self._spliced_mutation(sub_gene, splicing_gene[j], gene_var[i][j]*mutation_rate))
+                        else:
+                            mutated_gene = self._spliced_mutation(gene, splicing_gene, gene_var[i]*mutation_rate)
+                        child.append(mutated_gene)
                 else:
                     raise Exception(f'generation method must be Pure Mutation/Random Splice')
-                new_generation.append(children)
+                new_generation.append(child)
             # Add the two best survivors of the previous generation (this way the best fitness never goes down)
-            new_generation[:2] = best_genes[:2]
+            new_generation[:2] = best_parents[:2]
         return new_generation
 
     def initialize_generation(self, variable_list):
-        # Initialize parameters for optimization
         generation = list()
         for i in range(self.specimen_count):
             child = list()
             for var in variable_list:
                 if type(var) == list:
-                    child.append([[np.random.random_sample(subvar.shape) - 0.5] for subvar in var])
+                    child.append([np.random.random_sample(subvar.shape) - 0.5 for subvar in var])
                 else:
-                    child.append([np.random.random_sample(var.shape) - 0.5])
+                    child.append(np.random.random_sample(var.shape) - 0.5)
             generation.append(child)
         return generation
 
