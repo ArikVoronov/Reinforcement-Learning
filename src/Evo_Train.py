@@ -15,7 +15,7 @@ if __name__ == '__main__':
     env = TrackRunner.TrackRunnerEnv(run_velocity=0.02, turn_degrees=20, track=track, max_steps=200)
     # env = Pong.PongEnv(ball_speed=0.02, left_paddle_speed=0.02, right_paddle_speed=0.01, games_per_match=1)
 
-    evo_net = setup_neural_net_apx(state_dimension=env.state_vector_dimension, number_of_actions=env.number_of_actions)
+    evo_net = setup_neural_net_apx(input_size=env.state_vector_dimension, output_size=env.number_of_actions)
     # nullify_qs(EvoNet, env)
 
     fitness = EvoFitnessRL(env, evo_net)

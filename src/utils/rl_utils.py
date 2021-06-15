@@ -94,9 +94,7 @@ def create_featurizer(env):
     return featurize_state
 
 
-def setup_neural_net_apx(state_dimension, number_of_actions, save_file=None):
-    input_size = state_dimension
-    output_size = number_of_actions
+def setup_neural_net_apx(input_size, output_size, save_file=None):
     layer_sizes = [50, output_size]
 
     loss = MSELoss()

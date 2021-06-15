@@ -34,8 +34,8 @@ class GeneticOptimizer:
         for i in range(self.specimen_count):
             fitness[i, 0] = fitness_function(generation[i])
         # Sort - HIGHEST fitness first
-        ind = np.argsort(fitness, axis=0)
-        ind = np.flip(ind[-self.survivor_count:].squeeze())
+        ind = np.argsort(fitness, axis=0)[:self.survivor_count].squeeze()
+        # ind = np.flip(ind[-self.survivor_count:].squeeze())
         # Save fitness of the best survivors and calculate the change in fitness from the previous generation
         best_fit = fitness[ind[0], 0]
         best_genes = [generation[i] for i in ind]  # Surviving survivorCount specimens
@@ -203,12 +203,12 @@ class EvoFitnessRL:
             action = self._agent.pick_action(state)
             state, reward, done = self._env.step(action)
             total_reward += reward
-        return total_reward
+        return -total_reward
 
 
 if __name__ == "__main__":
     '''
-    This is an example comparing
+    Compare GA optimization vs classic LR fitting
     classic linear regression
     Neural network
     Evo optimization
@@ -216,31 +216,8 @@ if __name__ == "__main__":
     '''
     import matplotlib.pyplot as plt
     from src.Regressors.LinearReg import LinReg
+    from src.utils.rl_utils import setup_neural_net_apx
 
-
-    def init_nn(x, y):
-        # Define Neural Network policy approximator
-        # Hyper parameters
-        epochs = 200  # Irrelevant to RL
-        tolerance = 1e-5  # Irrelevant to RL
-        layer_parameters = [[10]]
-        layer_types = ['fc']
-        actuators = [[0], relu2, lin_act]
-
-        alpha = 0.01  # Learning Rate - placeholder, this value is defined in the main loop
-        beta1 = 0.9  # Step weighted average parameter
-        beta2 = 0.999  # Step normalization parameter
-        gamma = 1  # Irrelevant to RL
-        epsilon = 1e-8  # Addition to denominator to prevent div by 0
-        lam = 1e-8  # Regularization parameter
-        loss_function_type = 'Regular'
-        neural_net = Model(epochs, tolerance, actuators, layer_parameters, layer_types, alpha, beta1, beta2, epsilon,
-                           gamma, lam, loss_function_type)
-        # neural_net.setupLayerSizes(x,y)
-        return neural_net
-
-
-    # Compare GA optimization vs classic LR fitting
     # Create some samples for comparison (linear multi-dimension relation)
     # X[samples,features]
     features = 6
@@ -249,6 +226,8 @@ if __name__ == "__main__":
     weights = np.array([3, 2, 3, 4, 5, 1])
     bias = 1.5
     yi = np.dot(weights, Xi.T) + bias + 10 * np.random.rand(samples)
+
+    model_nn = setup_neural_net_apx(input_size=features, output_size=1)
 
     # LinReg classic fit
     print('Fit LinReg')
@@ -269,17 +248,16 @@ if __name__ == "__main__":
 
 
     def fit_lr(gen):
-        global lr
         LRGA.w = gen[0]
         LRGA.b = gen[1]
         y_pred = LRGA.predict(Xi)
-        error = np.sum((y_pred - yi) ** 2) / samples
-        return -error
+        error = np.mean((y_pred - yi) ** 2)
+        return error
 
 
     weights = np.random.rand(features)
     biases = np.random.rand(1)
-    gao1 = GeneticOptimizer(specimen_count=2000, survivor_count=20, tol=1E-5, max_iterations=50, mutation_rate=0.02,
+    gao1 = GeneticOptimizer(specimen_count=2000, survivor_count=20, max_iterations=50, mutation_rate=0.1,
                             generation_method="Random Splice")
     gao1.optimize([weights, biases], fit_lr)
     LRGA.w, LRGA.b = gao1.best_survivor
