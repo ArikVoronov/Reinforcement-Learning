@@ -54,22 +54,34 @@ def grad_check(model, x_batch, y_batch):
     return dw_approx
 
 
+class DataLoader:
+    def __init__(self, x, y, batch_size):
+        self._x = x
+        self._y = y
+        self._batch_size = batch_size
+
+    def next(self, batch_number):
+        if len(self._x.shape) <= 2:
+            x_batch = self._x[:, batch_number * self._batch_size:(batch_number + 1) * self._batch_size]
+        else:
+            x_batch = self._x[:, :, :, batch_number * self._batch_size:(batch_number + 1) * self._batch_size]
+        y_batch = self._y[:, batch_number * self._batch_size:(batch_number + 1) * self._batch_size]
+        return x_batch, y_batch
+
+
 def train(x, y, model, epochs, optimizer, batch_size=None, do_grad_check=False):
     if batch_size is None or batch_size >= x.shape[-1]:
         batch_size = x.shape[-1]
     # Begin optimization iterations
     loss_list = []  # Loss list
+    data_loader = DataLoader(x,y,batch_size)
     batches = int(np.floor(x.shape[-1] / batch_size)) + 1  # Number of batches per epoch
     for epoch in range(epochs):
         # optimizer.learning_rate = optimizer.learning_rate*0.99
         pbar = tqdm(range(batches))
         for batch_number in pbar:
             # Organize batch input/output
-            if len(x.shape) <= 2:
-                x_batch = x[:, batch_number * batch_size:(batch_number + 1) * batch_size]
-            else:
-                x_batch = x[:, :, :, batch_number * batch_size:(batch_number + 1) * batch_size]
-            y_batch = y[:, batch_number * batch_size:(batch_number + 1) * batch_size]
+            x_batch, y_batch = data_loader.next(batch_number)
 
             optimizer.zero_grad()
 
