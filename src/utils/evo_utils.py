@@ -206,6 +206,24 @@ class EvoFitnessRL:
         return -total_reward
 
 
+class EvoFitnessLinearRegression:
+    def __init__(self, model, x_samples, y_samples):
+        self.model = model
+        self.name = model.__class__.__name__
+        self.x_samples = x_samples
+        self.y_samples = y_samples
+
+    @staticmethod
+    def _mse_error(x1, x2):
+        return np.mean((x1 - x2) ** 2)
+
+    def __call__(self, gen):
+        self.model.set_parameters(gen)
+        y_pred = self.model.predict(self.x_samples)
+        error = self._mse_error(y_pred, self.y_samples)
+        return error
+
+
 if __name__ == "__main__":
     '''
     Compare GA optimization vs classic LR fitting
@@ -234,6 +252,8 @@ if __name__ == "__main__":
     LRLinReg = LinReg()
     LRLinReg.fit(Xi, yi)
     y_pred_LinReg = LRLinReg.predict(Xi)
+    error = np.mean((y_pred_LinReg - yi) ** 2)
+    print(f'Analytical linear regression error: {error}')
 
     # # NN
     # print('Fit NN')
@@ -246,20 +266,13 @@ if __name__ == "__main__":
     print('GA with lin reg function (Random Splice)')
     LRGA = LinReg()
 
-
-    def fit_lr(gen):
-        LRGA.w = gen[0]
-        LRGA.b = gen[1]
-        y_pred = LRGA.predict(Xi)
-        error = np.mean((y_pred - yi) ** 2)
-        return error
-
+    fitness_lr = EvoFitnessLinearRegression(LRGA, Xi, yi)
 
     weights = np.random.rand(features)
     biases = np.random.rand(1)
-    gao1 = GeneticOptimizer(specimen_count=2000, survivor_count=20, max_iterations=50, mutation_rate=0.1,
+    gao1 = GeneticOptimizer(specimen_count=2000, survivor_count=20, max_iterations=50, mutation_rate=0.5,
                             generation_method="Random Splice")
-    gao1.optimize([weights, biases], fit_lr)
+    gao1.optimize([weights, biases], fitness_lr)
     LRGA.w, LRGA.b = gao1.best_survivor
     y_pred_GA1 = LRGA.predict(Xi)
 
@@ -268,9 +281,9 @@ if __name__ == "__main__":
     LRGA2 = LinReg()
     weights = np.random.rand(features)
     biases = np.random.rand(1)
-    gao2 = GeneticOptimizer(specimen_count=2000, survivor_count=20, tol=1E-5, max_iterations=50, mutation_rate=0.02,
+    gao2 = GeneticOptimizer(specimen_count=2000, survivor_count=20, max_iterations=50, mutation_rate=0.5,
                             generation_method="Pure Mutation")
-    gao2.optimize([weights, biases], fit_lr)
+    gao2.optimize([weights, biases], fitness_lr)
 
     [LRGA2.w, LRGA2.b] = gao2.best_survivor
     y_pred_GA2 = LRGA2.predict(Xi)
