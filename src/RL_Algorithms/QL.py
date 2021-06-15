@@ -35,7 +35,7 @@ class CLF:
             os.makedirs(self._output_dir, exist_ok=True)
 
     def load_weights(self, weights_file_path):
-        self.q_approximator.load_model_weights(weights_file_path)
+        self.q_approximator.load_parameters_from_file(weights_file_path)
 
     def train(self, env):
         for episode in range(self.max_episodes):

@@ -1,38 +1,16 @@
 import numpy as np
+import datetime
 from tqdm import tqdm
+import os
+import pickle
 
 from src.ConvNet.activation_functions import ReLu2
 from src.ConvNet.model import Model
 
 
-class EvoAgent:
-    def __init__(self, model):
-        self.model = model
-
-    def pick_action(self, state):
-        a = self.model(state)
-        action = np.argmax(a)
-        return action
-
-
-def evo_fitness_function(env, agent):
-    def agent_fitness(gen):
-        agent.model.set_parameters(gen)
-        state = env.reset()
-        total_reward = 0
-        done = False
-        while not done:
-            action = agent.pick_action(state)
-            state, reward, done = env.step(action)
-            total_reward += reward
-        return total_reward
-
-    return agent_fitness
-
-
-class GAOptimizer:
+class GeneticOptimizer:
     def __init__(self, specimen_count, survivor_count, max_iterations, mutation_rate,
-                 generation_method="Random Splice", fitness_cap=None):
+                 generation_method="Random Splice", fitness_cap=None, output_dir=None):
         self.specimen_count = specimen_count  # total number of specimenCount to compete
         self.survivor_count = survivor_count  # number of specimenCount to survive each generation
         self.children_count = int(
@@ -48,6 +26,7 @@ class GAOptimizer:
         self.fitness_history = []
         self.best_survivor_history = []
         self.best_survivor = None
+        self.output_dir = output_dir
 
     def get_best_specimens(self, generation, fitness_function):
         # Calculate fitness of current generation
@@ -116,9 +95,9 @@ class GAOptimizer:
                         if type(gene) is list:
                             mutated_gene = list()
                             for j, sub_gene in enumerate(gene):
-                                mutated_gene.append(self._base_mutation(sub_gene, gene_var[i][j]*mutation_rate))
+                                mutated_gene.append(self._base_mutation(sub_gene, gene_var[i][j] * mutation_rate))
                         else:
-                            mutated_gene = self._base_mutation(gene, gene_var[i]*mutation_rate)
+                            mutated_gene = self._base_mutation(gene, gene_var[i] * mutation_rate)
                         child.append(mutated_gene)
                 elif self.generation_method == "Random Splice":
                     spliced = np.random.randint(len(best_parents))
@@ -128,9 +107,10 @@ class GAOptimizer:
                         mutated_gene = list()
                         if type(gene) is list:
                             for j, sub_gene in enumerate(gene):
-                                mutated_gene.append(self._spliced_mutation(sub_gene, splicing_gene[j], gene_var[i][j]*mutation_rate))
+                                mutated_gene.append(
+                                    self._spliced_mutation(sub_gene, splicing_gene[j], gene_var[i][j] * mutation_rate))
                         else:
-                            mutated_gene = self._spliced_mutation(gene, splicing_gene, gene_var[i]*mutation_rate)
+                            mutated_gene = self._spliced_mutation(gene, splicing_gene, gene_var[i] * mutation_rate)
                         child.append(mutated_gene)
                 else:
                     raise Exception(f'generation method must be Pure Mutation/Random Splice')
@@ -159,6 +139,15 @@ class GAOptimizer:
         :param fitness_function: function type, calculates the fitness of current generation
         :return:
         """
+
+        if self.output_dir is not None:
+            FORMAT = "%Y_%m_%d-%H_%M"
+            ts = datetime.datetime.now().strftime(FORMAT)
+            run_name = fitness_function.name + '_' + ts
+            self.output_dir = os.path.join(self.output_dir, run_name)
+            os.makedirs(self.output_dir, exist_ok=True)
+            print(f'parameters will be saved to {self.output_dir}')
+
         generation = self.initialize_generation(variable_list)
         self.fitness_history = []
         self.best_survivor_history = []
@@ -173,11 +162,48 @@ class GAOptimizer:
             self.best_survivor = generation[0]
             self.fitness_history.append(best_fit)
             self.best_survivor_history.append(self.best_survivor)
+
+            if self.output_dir is not None:
+                fitness_str = str(f'{best_fit:.2f}'.replace('.', '_'))
+                agent_name = f'agent_parameters_{itr}_fitness_{fitness_str}.pkl'
+
+                full_output_path = os.path.join(self.output_dir, agent_name)
+                with open(full_output_path, 'wb') as file:
+                    pickle.dump(self.best_survivor, file)
+
             if self.fitness_cap is not None:
                 if best_fit > self.fitness_cap:
                     print(f"breaking fitness {best_fit} larger than cap {self.fitness_cap}")
                     break
         print('Last Iteration: {}, Best fitness: {}'.format(itr, best_fit))
+
+
+class EvoAgent:
+    def __init__(self, model):
+        self.model = model
+
+    def pick_action(self, state):
+        a = self.model(state)
+        action = np.argmax(a)
+        return action
+
+
+class EvoFitnessRL:
+    def __init__(self, env, model):
+        self._agent = EvoAgent(model)
+        self._env = env
+        self.name = env.__class__.__name__
+
+    def __call__(self, gen):
+        self._agent.model.set_parameters(gen)
+        state = self._env.reset()
+        total_reward = 0
+        done = False
+        while not done:
+            action = self._agent.pick_action(state)
+            state, reward, done = self._env.step(action)
+            total_reward += reward
+        return total_reward
 
 
 if __name__ == "__main__":
@@ -253,8 +279,8 @@ if __name__ == "__main__":
 
     weights = np.random.rand(features)
     biases = np.random.rand(1)
-    gao1 = GAOptimizer(specimen_count=2000, survivor_count=20, tol=1E-5, max_iterations=50, mutation_rate=0.02,
-                       generation_method="Random Splice")
+    gao1 = GeneticOptimizer(specimen_count=2000, survivor_count=20, tol=1E-5, max_iterations=50, mutation_rate=0.02,
+                            generation_method="Random Splice")
     gao1.optimize([weights, biases], fit_lr)
     LRGA.w, LRGA.b = gao1.best_survivor
     y_pred_GA1 = LRGA.predict(Xi)
@@ -264,8 +290,8 @@ if __name__ == "__main__":
     LRGA2 = LinReg()
     weights = np.random.rand(features)
     biases = np.random.rand(1)
-    gao2 = GAOptimizer(specimen_count=2000, survivor_count=20, tol=1E-5, max_iterations=50, mutation_rate=0.02,
-                       generation_method="Pure Mutation")
+    gao2 = GeneticOptimizer(specimen_count=2000, survivor_count=20, tol=1E-5, max_iterations=50, mutation_rate=0.02,
+                            generation_method="Pure Mutation")
     gao2.optimize([weights, biases], fit_lr)
 
     [LRGA2.w, LRGA2.b] = gao2.best_survivor

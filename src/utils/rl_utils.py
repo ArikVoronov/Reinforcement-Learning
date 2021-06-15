@@ -95,27 +95,24 @@ def create_featurizer(env):
 
 
 def setup_neural_net_apx(state_dimension, number_of_actions, save_file=None):
-    def initialize_network():
-        input_size = state_dimension
-        layer_sizes = [50, number_of_actions]
+    input_size = state_dimension
+    output_size = number_of_actions
+    layer_sizes = [50, output_size]
 
-        loss = MSELoss()
-        activation_list = [ReLu2, ReLu2]
-        layers_list = [FullyConnectedLayer((input_size, layer_sizes[0])), activation_list[0]()]
-        for layer_number in range(1, len(layer_sizes)):
-            current_layer_size = (layer_sizes[layer_number - 1], layer_sizes[layer_number])
-            layers_list.append(FullyConnectedLayer(current_layer_size))
-            layers_list.append(activation_list[layer_number]())
+    loss = MSELoss()
+    activation_list = [ReLu2, ReLu2]
+    layers_list = [FullyConnectedLayer((input_size, layer_sizes[0])), activation_list[0]()]
+    for layer_number in range(1, len(layer_sizes)):
+        current_layer_size = (layer_sizes[layer_number - 1], layer_sizes[layer_number])
+        layers_list.append(FullyConnectedLayer(current_layer_size))
+        layers_list.append(activation_list[layer_number]())
 
-        neural_network = Model(layers_list, loss=loss)
-        return neural_network
-
-    network = initialize_network()
+    model = Model(layers_list, loss=loss)
     if save_file is not None:
         # Unpickle -  Data = [wv,bv]
-        network.load_model_weights(save_file)
+        model.load_parameters_from_file(save_file)
         print('\nVariables loaded from ' + save_file)
-    return network
+    return model
 
 
 class NeuralNetworkAgent:
@@ -123,11 +120,9 @@ class NeuralNetworkAgent:
         self.q_approximator = apx
 
     def load_weights(self, weights_file_path):
-        self.q_approximator.load_model_weights(weights_file_path)
+        self.q_approximator.load_parameters_from_file(weights_file_path)
 
     def pick_action(self, state):
-        a = self.q_approximator(state)
-        q = a
-        q = q.squeeze()
+        q = self.q_approximator(state).squeeze()
         best_action = np.argwhere(q == np.amax(q))
         return best_action

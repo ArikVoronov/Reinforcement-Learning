@@ -1,3 +1,4 @@
+import pickle
 import numpy as np
 
 from src.ConvNet.activation_functions import ReLu, Softmax, LinearActivation
@@ -19,13 +20,6 @@ class Model:
 
         self.params = [layer.get_parameters() for layer in self.layers_list]
 
-    def load_model_weights(self, weights_file_path):
-        pass
-
-    def calculate_loss(self, targets, network_output):
-        loss = self._loss.forward(self._ctx_loss, targets, network_output)
-        return loss
-
     def forward(self, x):
         layer_input = x
         last_output = None
@@ -33,9 +27,6 @@ class Model:
             last_output = self.layers_list[layer_number].forward(self._ctx_list[layer_number], layer_input)
             layer_input = last_output
         return last_output
-
-    def __call__(self, x):
-        return self.forward(x)
 
     def backward(self):
         dz = []
@@ -47,12 +38,28 @@ class Model:
             dz.insert(0, dz_temp)
         dz.insert(0, [0])
 
+    def calculate_loss(self, targets, network_output):
+        loss = self._loss.forward(self._ctx_loss, targets, network_output)
+        return loss
+
     def set_parameters(self, parameters_list):
         for layer_number in range(len(self.layers_list)):
             self.layers_list[layer_number].set_parameters(parameters_list[layer_number])
 
     def get_parameters(self):
         return self.params
+
+    def load_parameters_from_file(self, parameters_file_path):
+        with open(parameters_file_path, 'rb') as file:
+            parameters_list = pickle.load(file)
+        self.set_parameters(parameters_list)
+
+    def save_parameters_to_file(self, parameters_file_path):
+        with open(parameters_file_path, 'wb') as file:
+            pickle.dump(self.params, file)
+
+    def __call__(self, x):
+        return self.forward(x)
 
 
 def make_example_net():
