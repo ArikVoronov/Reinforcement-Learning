@@ -3,7 +3,7 @@ import numpy as np
 
 from src.Envs import TrackRunner, Pong
 from src.RL_Algorithms import QL, DQN
-from src.utils.rl_utils import setup_neural_net_apx, nullify_qs, moving_average
+from src.utils.rl_utils import setup_fc_model, nullify_qs, moving_average
 
 
 def plots():
@@ -48,14 +48,14 @@ if __name__ == '__main__':
     # linear_approximator = TDL_Linear.LinearApproximator(nS=env.state_vector_dimension, nA=3, learningRate=1e-3,
     #                                                     featurize=None,
     #                                                     saveFile=None)
-    q_net_apx = setup_neural_net_apx(state_dimension=env.state_vector_dimension, number_of_actions=3,
-                                     save_file=save_file)
+    q_net_apx = setup_fc_model(input_size=env.state_vector_dimension, output_size=env.number_of_actions,
+                               save_file=save_file)
     # decoupled_network = DecoupledNN(learningRate=5e-4, batchSize=500, batches=20, maxEpochs=100,
     #                                 netLanes=env.number_of_actions, layerSizes=[200],
     #                                 inputSize=env.state_vector_dimension,
     #                                 activationFunctions=[[], relu2, softmax])
-    # if save_file is None:
-    #     nullify_qs(q_net_apx, env)
+    if save_file is None:
+        nullify_qs(q_net_apx, env)
 
     # RL Optimization
     output_dir_path = 'F:\\My Documents\\Study\\Programming\\PycharmProjects\\Reinforcement-Learning\\output'
@@ -73,7 +73,7 @@ if __name__ == '__main__':
         #         maxEpisodes=max_episodes, printoutEps=10, featurize=None,
         #         experienceCacheSize=100, experienceBatchSize=10, QCopyEpochs=50),
 
-        QL.CLF(q_net_apx, model_learning_rate= 0.01,number_of_actions=env.number_of_actions, reward_discount=0.95, epsilon=0.3,
+        QL.CLF(q_net_apx, model_learning_rate= 0.001,number_of_actions=env.number_of_actions, reward_discount=0.95, epsilon=0.3,
                epsilon_decay=0.95,
                max_episodes=max_episodes, printout_episodes=50, featurize=None, output_dir_path=output_dir_path)
     ]

@@ -43,8 +43,11 @@ def nullify_qs(network, env):
     lin_reg.fit(states_left_hand, -state_matrix[:, -1])
     w_new = np.hstack([lin_reg.w, 1])
     b_new = lin_reg.b
-    network.wv[1] = np.tile(w_new[:, None], network.wv[1].shape[0]).T
-    network.bv[1] = np.tile(b_new, network.bv[1].shape[0])[:, None]
+
+    # set FIRST linear layer to be copies of the linreg parameters
+    first_fc_layer_index = 1
+    network.layers_list[first_fc_layer_index].w = np.tile(w_new[:, None], network.layers_list[first_fc_layer_index].w.shape[0]).T
+    network.layers_list[first_fc_layer_index].b = np.tile(b_new, network.layers_list[first_fc_layer_index].b.shape[0])[:, None]
     print('Initial Q values NULLIFIED')
 
 
@@ -94,7 +97,7 @@ def create_featurizer(env):
     return featurize_state
 
 
-def setup_neural_net_apx(input_size, output_size, save_file=None):
+def setup_fc_model(input_size, output_size, save_file=None):
     layer_sizes = [50, output_size]
 
     loss = MSELoss()
@@ -107,7 +110,6 @@ def setup_neural_net_apx(input_size, output_size, save_file=None):
 
     model = Model(layers_list, loss=loss)
     if save_file is not None:
-        # Unpickle -  Data = [wv,bv]
         model.load_parameters_from_file(save_file)
         print('\nVariables loaded from ' + save_file)
     return model

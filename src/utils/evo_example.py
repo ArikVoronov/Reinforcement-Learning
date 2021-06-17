@@ -2,7 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from src.Regressors.LinearReg import LinReg
-from src.utils.rl_utils import setup_neural_net_apx
+from src.utils.rl_utils import setup_fc_model
+
+from src.ConvNet.utils import train
+from src.ConvNet.optim import SGD
 from src.utils.evo_utils import EvoFitnessLinearRegression, GeneticOptimizer
 
 
@@ -18,12 +21,10 @@ def main():
     # X[samples,features]
     features = 6
     samples = 1000
-    Xi = 10 * np.random.rand(samples, features)
-    weights = np.array([3, 2, 3, 4, 5, 1])
-    bias = 1.5
+    Xi = 1 * np.random.rand(samples, features)
+    weights = 0.1*np.array([3, 2, 3, 4, 5, 1])
+    bias = 0.15
     yi = np.dot(weights, Xi.T) + bias + 10 * np.random.rand(samples)
-
-    model_nn = setup_neural_net_apx(input_size=features, output_size=1)
 
     # LinReg classic fit
     print('Fit LinReg')
@@ -31,7 +32,16 @@ def main():
     LRLinReg.fit(Xi, yi)
     y_pred_LinReg = LRLinReg.predict(Xi)
     error = np.mean((y_pred_LinReg - yi) ** 2)
-    print(f'Analytical linear regression error: {error}')
+    print(f'Analytical linear regression error: {error:.2f}')
+
+    model_nn = setup_fc_model(input_size=features, output_size=1)
+    optimizer = SGD(layers=model_nn.layers_list, learning_rate=0.01)
+    train(Xi.T, yi[None,:], model_nn, epochs=2, optimizer=optimizer, batch_size=256)
+    y_pred = model_nn(Xi.T)
+    error = np.mean((y_pred - yi) ** 2)
+    print(f'NN regression error: {error:.2f}')
+
+
 
     # # NN
     # print('Fit NN')

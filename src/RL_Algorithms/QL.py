@@ -81,9 +81,9 @@ class CLF:
         self.q_approximator.backward()
 
         # print()
-        # print(np.sum(self.q_approximator.layers_list[-4].w))
+        # print(np.mean(self.q_approximator.layers_list[-4].w**2))
         self.optimizer.step()
-        # print(np.sum(self.q_approximator.layers_list[-4].w))
+        # print(np.mean(self.q_approximator.layers_list[-4].w**2))
 
     def epsilon_policy(self, state):
         q = self.q_approximator(state)

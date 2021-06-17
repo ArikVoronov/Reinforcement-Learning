@@ -4,7 +4,7 @@ import pickle
 
 from src.Envs import Pong, TrackRunner
 from src.utils.evo_utils import GeneticOptimizer, EvoAgent, EvoFitnessRL
-from src.utils.rl_utils import setup_neural_net_apx, nullify_qs
+from src.utils.rl_utils import setup_fc_model, nullify_qs
 
 OUTPUT_DIR = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\evo_agents'
 
@@ -15,7 +15,7 @@ if __name__ == '__main__':
     env = TrackRunner.TrackRunnerEnv(run_velocity=0.02, turn_degrees=20, track=track, max_steps=200)
     # env = Pong.PongEnv(ball_speed=0.02, left_paddle_speed=0.02, right_paddle_speed=0.01, games_per_match=1)
 
-    evo_net = setup_neural_net_apx(input_size=env.state_vector_dimension, output_size=env.number_of_actions)
+    evo_net = setup_fc_model(input_size=env.state_vector_dimension, output_size=env.number_of_actions)
     # nullify_qs(EvoNet, env)
 
     fitness = EvoFitnessRL(env, evo_net)
