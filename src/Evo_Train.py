@@ -16,10 +16,10 @@ if __name__ == '__main__':
     # env = Pong.PongEnv(ball_speed=0.02, left_paddle_speed=0.02, right_paddle_speed=0.01, games_per_match=1)
 
     evo_net = setup_fc_model(input_size=env.state_vector_dimension, output_size=env.number_of_actions)
-    # nullify_qs(EvoNet, env)
+    nullify_qs(evo_net, env)
 
     fitness = EvoFitnessRL(env, evo_net)
-    gao = GeneticOptimizer(specimen_count=500, survivor_count=20, max_iterations=10,
+    gao = GeneticOptimizer(specimen_count=200, survivor_count=20, max_iterations=10,
                            mutation_rate=1, generation_method="Random Splice", fitness_cap=100, output_dir=OUTPUT_DIR)
 
     gao.optimize(evo_net.get_parameters(), fitness)

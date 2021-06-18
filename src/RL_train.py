@@ -5,6 +5,8 @@ from src.Envs import TrackRunner, Pong
 from src.RL_Algorithms import QL, DQN
 from src.utils.rl_utils import setup_fc_model, nullify_qs, moving_average
 
+OUTPUT_DIR = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\rl_agents'
+
 
 def plots():
     plt.close('all')
@@ -32,10 +34,11 @@ def plots():
 
 
 if __name__ == '__main__':
+    np.random.seed(42)
 
     # Build Env
     track = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\src\Envs\Tracks\tracky.pkl'
-    env = TrackRunner.TrackRunnerEnv(run_velocity=0.02, turn_degrees=20, track=track, max_steps=100)
+    env = TrackRunner.TrackRunnerEnv(run_velocity=0.02, turn_degrees=20, track=track, max_steps=200)
     # env = Pong.PongEnv(ball_speed=0.02, left_paddle_speed=0.02, right_paddle_speed=0.01, games_per_match=10)
 
     # env= envs.Pong()
@@ -54,11 +57,10 @@ if __name__ == '__main__':
     #                                 netLanes=env.number_of_actions, layerSizes=[200],
     #                                 inputSize=env.state_vector_dimension,
     #                                 activationFunctions=[[], relu2, softmax])
-    if save_file is None:
-        nullify_qs(q_net_apx, env)
+    # if save_file is None:
+    #     nullify_qs(q_net_apx, env)
 
     # RL Optimization
-    output_dir_path = 'F:\\My Documents\\Study\\Programming\\PycharmProjects\\Reinforcement-Learning\\output'
     max_episodes = 5000
     # List of classifiers to train
 
@@ -73,9 +75,10 @@ if __name__ == '__main__':
         #         maxEpisodes=max_episodes, printoutEps=10, featurize=None,
         #         experienceCacheSize=100, experienceBatchSize=10, QCopyEpochs=50),
 
-        QL.CLF(q_net_apx, model_learning_rate= 0.001,number_of_actions=env.number_of_actions, reward_discount=0.95, epsilon=0.3,
+        QL.CLF(q_net_apx, model_learning_rate=0.005, number_of_actions=env.number_of_actions, reward_discount=0.95,
+               epsilon=0.3,
                epsilon_decay=0.95,
-               max_episodes=max_episodes, printout_episodes=50, featurize=None, output_dir_path=output_dir_path)
+               max_episodes=max_episodes, printout_episodes=100, featurize=None, output_dir_path=OUTPUT_DIR)
     ]
 
     # Training

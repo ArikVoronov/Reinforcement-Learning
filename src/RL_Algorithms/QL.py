@@ -1,17 +1,17 @@
 import copy
 import os
 import pickle
-from datetime import datetime
+import datetime
 import numpy as np
 from src.ConvNet.optim import SGD
+from tqdm import tqdm
 
 
 class CLF:
-    def __init__(self, apx, number_of_actions,model_learning_rate,
+    def __init__(self, apx, number_of_actions, model_learning_rate,
                  reward_discount=0.9, epsilon=0.1, epsilon_decay=1,
                  max_episodes=1000, printout_episodes=None, featurize=None, output_dir_path=None):
         self.q_approximator = copy.deepcopy(apx)
-
 
         self.optimizer = SGD(layers=self.q_approximator.layers_list, learning_rate=model_learning_rate)
         self.number_of_actions = number_of_actions
@@ -28,22 +28,28 @@ class CLF:
             self.featurize = featurize
         self.epsilon = self.epsilon_0
         self._output_dir = output_dir_path
-        if self._output_dir is not None:
-            FORMAT = "%Y_%m_%d-%H_%M"
-            ts = datetime.now().strftime(FORMAT)
-            self._output_dir = os.path.join(self._output_dir, ts)
-            os.makedirs(self._output_dir, exist_ok=True)
 
     def load_weights(self, weights_file_path):
         self.q_approximator.load_parameters_from_file(weights_file_path)
 
     def train(self, env):
-        for episode in range(self.max_episodes):
+        if self._output_dir is not None:
+            FORMAT = "%Y_%m_%d-%H_%M"
+            ts = datetime.datetime.now().strftime(FORMAT)
+            env_name = env.__class__.__name__
+            run_name = env_name + '_' + ts
+            self._output_dir = os.path.join(self._output_dir, run_name)
+            os.makedirs(self._output_dir, exist_ok=True)
+            print(f'parameters will be saved to {self._output_dir}')
+        pbar = tqdm(range(self.max_episodes))
+        best_parameters = None
+        best_reward = None
+        for episode in pbar:
             state = env.reset()
             state = self.featurize(state).reshape([-1, 1])
             episode_steps = 0
             episode_reward = 0
-            self.epsilon = np.maximum(0.01, self.epsilon_0 * self.epsilon_decay ** episode)
+
             while True:
                 action = self.pick_action(state)
                 next_state, reward, done = env.step(action)
@@ -55,35 +61,35 @@ class CLF:
                 if done:
                     self.episode_steps_list.append(episode_steps)
                     self.episode_reward_list.append(episode_reward)
+
+                    mean_steps = np.mean(self.episode_steps_list[-self.printout_episodes:])
+                    mean_reward = np.mean(self.episode_reward_list[-self.printout_episodes:])
+                    pbar.desc = f'steps {mean_steps:.1f} ; reward {mean_reward:.2f}; epsilon {self.epsilon:.3f}'
                     if self.printout_episodes is not None:
                         if (episode % self.printout_episodes == 0) and episode > 0:
-                            mean_steps = np.mean(self.episode_steps_list[-self.printout_episodes:])
-                            mean_reward = np.mean(self.episode_reward_list[-self.printout_episodes:])
-                            print('Episode {}/{} ; Steps {} ; Reward {:.4}'
-                                  .format(episode, self.max_episodes, mean_steps, mean_reward))
+                            self.epsilon = np.maximum(0.001, self.epsilon * self.epsilon_decay)
+                            best_parameters = self.q_approximator.get_parameters()
+                            best_reward = episode_reward
                             if self._output_dir is not None:
-                                output_file_path = os.path.join(self._output_dir, f'weights_episode_{episode}.pkl')
-                                # with open(output_file_path, "wb") as file:
-                                #     pickle.dump([self.q_approximator.wv, self.q_approximator.bv], file)
+                                best_rewardd_str = str(f'{best_reward:.2f}'.replace('.', '_'))
+                                agent_name = f'agent_parameters_{episode}_fitness_{best_rewardd_str}.pkl'
+                                full_output_path = os.path.join(self._output_dir, agent_name)
+                                with open(full_output_path, "wb") as file:
+                                    pickle.dump(best_parameters, file)
                     break
 
     def optimize_step(self, state, next_state, reward, action):
         self.optimizer.zero_grad()
         # Forward pass
-
         q_next = self.q_approximator(next_state)
-        q_current = self.q_approximator(state) # current after next to save forward context
+        q_current = self.q_approximator(state)  # current after next to save forward context
         y = q_current.copy()
         y[action] = reward + self.reward_discount * np.max(q_next)
 
         # Backward pass
         self.q_approximator.calculate_loss(y, q_current)
         self.q_approximator.backward()
-
-        # print()
-        # print(np.mean(self.q_approximator.layers_list[-4].w**2))
         self.optimizer.step()
-        # print(np.mean(self.q_approximator.layers_list[-4].w**2))
 
     def epsilon_policy(self, state):
         q = self.q_approximator(state)
@@ -97,6 +103,5 @@ class CLF:
 
     def pick_action(self, state):
         action_probability = self.epsilon_policy(state)
-
         action = np.random.choice(self.number_of_actions, p=action_probability)
         return action

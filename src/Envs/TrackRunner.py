@@ -3,7 +3,7 @@ import pygame
 
 from src.Envs.TrackBuilder import Track, CoordinateTransformer
 from src.Envs.consts import *
-from src.Envs.env_utils import run_env,HumanController
+from src.Envs.env_utils import run_env, HumanController
 
 
 def get_line_parameters(pos, angle):
@@ -164,7 +164,7 @@ class Player:
 
 
 class TrackRunnerEnv:
-    def __init__(self, run_velocity, turn_degrees, track, max_steps=None):
+    def __init__(self, run_velocity, turn_degrees, track, max_steps=None, verbose=False):
         self.coordinate_transformer = None
         if isinstance(track, Track):
             self.track = track
@@ -182,6 +182,7 @@ class TrackRunnerEnv:
             self.max_steps = np.inf
         else:
             self.max_steps = max_steps
+        self._verbose = verbose
 
         self.reset()
 
@@ -200,7 +201,8 @@ class TrackRunnerEnv:
         self.get_state()
         self.reward = self.get_reward()
         if self.steps > self.max_steps:
-            print('Timed out')
+            if self._verbose:
+                print('Timed out')
             self.done = True
         if self.player.collide:
             self.done = True
@@ -236,11 +238,10 @@ class TrackRunnerEnv:
 
 
 if __name__ == "__main__":
-
     track = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\src\Envs\Tracks\tracky.pkl'
 
     run_velocity = 0.01
-    turn_degrees = 20
+    turn_degrees = 15
     human_player = HumanController()
     agent = human_player.pick_action
     env = TrackRunnerEnv(run_velocity, turn_degrees, track)

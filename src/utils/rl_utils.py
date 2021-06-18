@@ -4,7 +4,7 @@ import sklearn.preprocessing
 from sklearn.kernel_approximation import RBFSampler
 
 import src.Regressors.LinearReg as LinearReg
-from src.ConvNet.activation_functions import ReLu2, Softmax
+from src.ConvNet.activation_functions import ReLu2, Softmax,LinearActivation
 from src.ConvNet.layer_classes import FullyConnectedLayer
 from src.ConvNet.losses import NLLoss, MSELoss
 
@@ -101,7 +101,7 @@ def setup_fc_model(input_size, output_size, save_file=None):
     layer_sizes = [50, output_size]
 
     loss = MSELoss()
-    activation_list = [ReLu2, ReLu2]
+    activation_list = [ReLu2, LinearActivation]
     layers_list = [FullyConnectedLayer((input_size, layer_sizes[0])), activation_list[0]()]
     for layer_number in range(1, len(layer_sizes)):
         current_layer_size = (layer_sizes[layer_number - 1], layer_sizes[layer_number])
