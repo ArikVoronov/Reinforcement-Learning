@@ -164,6 +164,8 @@ class Player:
 
 
 class TrackRunnerEnv:
+    PER_STEP_REWARD = 0.01
+
     def __init__(self, run_velocity, turn_degrees, track, max_steps=None, verbose=False):
         self.coordinate_transformer = None
         if isinstance(track, Track):
@@ -210,9 +212,9 @@ class TrackRunnerEnv:
 
     def get_reward(self):
         factor = self.player.speed / self.player.initial_speed  # factor=1 for constant speed
-        reward = 0.1 * factor
+        reward = 1 / self.max_steps
         if self.player.collide:
-            reward = -10
+            reward += -1
         return reward
 
     def get_state(self):

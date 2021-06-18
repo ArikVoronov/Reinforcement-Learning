@@ -57,8 +57,8 @@ if __name__ == '__main__':
     #                                 netLanes=env.number_of_actions, layerSizes=[200],
     #                                 inputSize=env.state_vector_dimension,
     #                                 activationFunctions=[[], relu2, softmax])
-    # if save_file is None:
-    #     nullify_qs(q_net_apx, env)
+    if save_file is None:
+        nullify_qs(q_net_apx, env)
 
     # RL Optimization
     max_episodes = 5000

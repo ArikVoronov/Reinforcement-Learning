@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 class GeneticOptimizer:
     def __init__(self, specimen_count, survivor_count, max_iterations, mutation_rate,
-                 generation_method="Random Splice", fitness_cap=None, output_dir=None):
+                 generation_method="Random Splice", fitness_target=None, output_dir=None):
         self.specimen_count = specimen_count  # total number of specimenCount to compete
         self.survivor_count = survivor_count  # number of specimenCount to survive each generation
         self.children_count = int(
@@ -19,7 +19,7 @@ class GeneticOptimizer:
         self.base_mutation_rate = mutation_rate  # rate of change with each new generation
         self.generation_method = generation_method  # Random Splice/ Pure Mutation
 
-        self.fitness_cap = fitness_cap
+        self.fitness_target = fitness_target
 
         self.fitness_history = []
         self.best_survivor_history = []
@@ -169,8 +169,8 @@ class GeneticOptimizer:
                 with open(full_output_path, 'wb') as file:
                     pickle.dump(self.best_survivor, file)
 
-            if self.fitness_cap is not None:
-                if best_fit > self.fitness_cap:
-                    print(f"breaking fitness {best_fit} larger than cap {self.fitness_cap}")
+            if self.fitness_target is not None:
+                if best_fit < self.fitness_target:
+                    print(f"breaking: current best fitness {best_fit} under target {self.fitness_target}")
                     break
         print('Last Iteration: {}, Best fitness: {}'.format(itr, best_fit))
