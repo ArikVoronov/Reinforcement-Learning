@@ -1,9 +1,8 @@
-import datetime
 import os
-import pickle
 
-from src.Envs import Pong, TrackRunner
-from src.utils.evo_utils import GeneticOptimizer, EvoAgent, EvoFitnessRL
+from src.Envs import TrackRunner
+from src.evo.evo_utils import EvoFitnessRL
+from src.evo.genetic_algorithm import GeneticOptimizer
 from src.utils.rl_utils import setup_fc_model, nullify_qs
 
 OUTPUT_DIR = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\evo_agents'

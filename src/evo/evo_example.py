@@ -6,7 +6,8 @@ from src.utils.rl_utils import setup_fc_model
 
 from src.ConvNet.utils import train
 from src.ConvNet.optim import SGD
-from src.utils.evo_utils import EvoFitnessLinearRegression, GeneticOptimizer
+from src.evo.evo_utils import EvoFitnessLinearRegression
+from src.evo.genetic_algorithm import GeneticOptimizer
 
 
 def main():

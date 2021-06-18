@@ -42,8 +42,6 @@ class CLF:
             os.makedirs(self._output_dir, exist_ok=True)
             print(f'parameters will be saved to {self._output_dir}')
         pbar = tqdm(range(self.max_episodes))
-        best_parameters = None
-        best_reward = None
         for episode in pbar:
             state = env.reset()
             state = self.featurize(state).reshape([-1, 1])
