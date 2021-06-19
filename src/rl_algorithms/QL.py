@@ -3,9 +3,9 @@ import os
 import pickle
 import datetime
 import numpy as np
-from src.ConvNet.optim import SGD
+from src.neural_model.optim import SGD
 from tqdm import tqdm
-from src.ConvNet.utils import grad_check
+from src.neural_model.utils import grad_check
 
 class CLF:
     def __init__(self, apx, number_of_actions, model_learning_rate,

@@ -1,12 +1,12 @@
 import numpy as np
 
-from src.ConvNet.activation_functions import ReLu, Softmax
-from src.ConvNet.layer_classes import FullyConnectedLayer
-from src.ConvNet.losses import NLLoss,MSELoss
-from src.ConvNet.model import Model
+from src.neural_model.activation_functions import ReLu, Softmax
+from src.neural_model.layer_classes import FullyConnectedLayer
+from src.neural_model.losses import NLLoss,MSELoss
+from src.neural_model.models import Model
 
-from src.ConvNet.optim import SGD
-from src.ConvNet.utils import squish_range, normalize, make_one_hot_vector, train_model
+from src.neural_model.optim import SGD
+from src.neural_model.utils import squish_range, normalize, make_one_hot_vector, train_model
 import torchvision.datasets as datasets
 
 

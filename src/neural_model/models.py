@@ -1,6 +1,6 @@
 import pickle
 
-from src.ConvNet.layer_classes import Context, InputLayer
+from src.neural_model.layer_classes import Context, InputLayer
 
 
 class Model:

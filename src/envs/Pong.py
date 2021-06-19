@@ -1,8 +1,8 @@
 import numpy as np
 import pygame
 
-from src.Envs.consts import *
-from src.Envs.env_utils import run_env, HumanController
+from src.envs.consts import *
+from src.envs.env_utils import run_env, HumanController
 
 
 # Game object classes

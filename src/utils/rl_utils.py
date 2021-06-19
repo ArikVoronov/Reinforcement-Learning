@@ -3,12 +3,12 @@ import sklearn.pipeline
 import sklearn.preprocessing
 from sklearn.kernel_approximation import RBFSampler
 
-import src.Regressors.LinearReg as LinearReg
-from src.ConvNet.activation_functions import ReLu2, Softmax, LinearActivation
-from src.ConvNet.layer_classes import FullyConnectedLayer
-from src.ConvNet.losses import NLLoss, MSELoss
+import src.regressors.linear_regressor as LinearReg
+from src.neural_model.activation_functions import ReLu2, Softmax, LinearActivation
+from src.neural_model.layer_classes import FullyConnectedLayer
+from src.neural_model.losses import NLLoss, MSELoss
 
-from src.ConvNet.model import Model
+from src.neural_model.models import Model
 
 
 def replicate_weights(clfs):
@@ -39,7 +39,7 @@ def nullify_qs(network, env):
                                                                              states_left_hand.shape[1])
 
     # Assuming wn = 1, fit linearly to states
-    lin_reg = LinearReg.LinReg()
+    lin_reg = LinearReg.LinearRegressor()
     lin_reg.fit(states_left_hand, -state_matrix[:, -1])
     w_new = np.hstack([lin_reg.w, 1])
     b_new = lin_reg.b

@@ -1,4 +1,4 @@
-from src.Envs import TrackRunner
+from src.envs import TrackRunner
 from src.utils.rl_utils import setup_fc_model
 import numpy as np
 from src.utils.rl_utils import nullify_qs

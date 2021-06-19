@@ -1,12 +1,8 @@
 # LinReg
 import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-import time
-from sklearn.linear_model import LinearRegression
 
 
-class LinReg:
+class LinearRegressor:
     def __init__(self):
         self.w = None
         self.b = None
@@ -29,46 +25,52 @@ class LinReg:
         self.w = parameters_list[0]
         self.b = parameters_list[1]
 
+    def get_parameters(self):
+        parameters_list = [self.w, self.b]
+        return parameters_list
+
     def predict(self, x_samples):
         y_pred = np.dot(self.w, x_samples.T) + self.b
         return y_pred
 
 
-if __name__ == "__main__":
+def run_example():
+    import time
+    from sklearn import linear_model
+
     # create test dataset : Hyperplane + random noise
-    # X[samples,features]    
+    # X[samples,features]
     samples = 1000
-    Xi = 10 * np.random.rand(samples, 5)
+    input_samples = 10 * np.random.rand(samples, 5)
     weights = np.array([3, 4, 1, 2, 9])
     bias = 10
-    yi = np.dot(weights, Xi.T) + bias + 10 * np.random.rand(samples)
+    target = np.dot(weights, input_samples.T) +\
+             bias + 10 * np.random.rand(samples)
 
-    # sklearn regressor timing
-    linReg = LinearRegression()
+    # sklearn regressor
+    sklearn_linear_regression = linear_model.LinearRegression()
     time1 = time.time()
     for i in range(100):
-        linReg.fit(Xi, yi)
+        sklearn_linear_regression.fit(input_samples, target)
     time2 = time.time()
-    print('1', time2 - time1)
-    y_pred1 = linReg.predict(Xi)
+    y_pred1 = sklearn_linear_regression.predict(input_samples)
+    error1 = np.sum((y_pred1 - target) ** 2) / samples
+    print('\nsklearn regressor')
+    print('timing', time2 - time1)
+    print('error', error1)
 
-    # my regressor timing
-    lr = LinReg()
+    # new regressor
+    linear_regressor = LinearRegressor()
     time1 = time.time()
     for i in range(100):
-        lr.fit(Xi, yi)
+        linear_regressor.fit(input_samples, target)
     time2 = time.time()
-    print('2', time2 - time1)
-    y_pred2 = lr.predict(Xi)
+    y_pred2 = linear_regressor.predict(input_samples)
+    error2 = np.sum((y_pred2 - target) ** 2) / samples
+    print('\nnew regressor')
+    print('timing', time2 - time1)
+    print('error', error2)
 
-    # Compare errors
-    error1 = np.sum((y_pred1 - yi) ** 2) / samples
-    error2 = np.sum((y_pred2 - yi) ** 2) / samples
-    print(error1, error2)
 
-    # Plot of approximation for single feature case
-    ##plt.figure()
-    ##plt.scatter(Xi,yi)
-    ##plt.scatter(Xi,y_pred2)
-    ##plt.scatter(Xi,y_pred1,marker='*')
-    ##plt.show(block=False)
+if __name__ == "__main__":
+    run_example()

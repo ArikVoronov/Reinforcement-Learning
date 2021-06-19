@@ -1,11 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from src.Regressors.LinearReg import LinReg
+from src.regressors.linear_regressor import LinearRegressor
 from src.utils.rl_utils import setup_fc_model
 
-from src.ConvNet.utils import train_model
-from src.ConvNet.optim import SGD
+from src.neural_model.utils import train_model
+from src.neural_model.optim import SGD
 from src.evo.evo_utils import EvoFitnessLinearRegression
 from src.evo.genetic_algorithm import GeneticOptimizer
 
@@ -29,7 +29,7 @@ def main():
 
     # LinReg classic fit
     print('Fit LinReg')
-    LRLinReg = LinReg()
+    LRLinReg = LinearRegressor()
     LRLinReg.fit(Xi, yi)
     y_pred_LinReg = LRLinReg.predict(Xi)
     error = np.mean((y_pred_LinReg - yi) ** 2)
@@ -53,7 +53,7 @@ def main():
 
     # GA with lin reg function (Random Splice)
     print('GA with lin reg function (Random Splice)')
-    LRGA = LinReg()
+    LRGA = LinearRegressor()
 
     fitness_lr = EvoFitnessLinearRegression(LRGA, Xi, yi)
 
@@ -67,7 +67,7 @@ def main():
 
     # GA with lin reg function (Pure Mutation)
     print('GA with lin reg function (Pure Mutation)')
-    LRGA2 = LinReg()
+    LRGA2 = LinearRegressor()
     weights = np.random.rand(features)
     biases = np.random.rand(1)
     gao2 = GeneticOptimizer(specimen_count=2000, survivor_count=20, max_iterations=50, mutation_rate=0.5,

@@ -1,9 +1,9 @@
 import numpy as np
 import pygame
 
-from src.Envs.TrackBuilder import Track, CoordinateTransformer
-from src.Envs.consts import *
-from src.Envs.env_utils import run_env, HumanController
+from src.envs.TrackBuilder import Track, CoordinateTransformer
+from src.envs.consts import *
+from src.envs.env_utils import run_env, HumanController
 
 
 def get_line_parameters(pos, angle):

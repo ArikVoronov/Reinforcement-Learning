@@ -3,7 +3,7 @@ import pygame
 import numpy as np
 import pickle
 
-from src.Envs.consts import *
+from src.envs.consts import *
 
 DEFAULT_TRACKS_FOLDER_PATH = '.\\Tracks'
 

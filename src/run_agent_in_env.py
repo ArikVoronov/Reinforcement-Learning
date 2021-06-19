@@ -1,4 +1,4 @@
-from src.Envs.env_utils import run_env
+from src.envs.env_utils import run_env
 from src.utils.rl_utils import NeuralNetworkAgent
 from src.core.setup_env_and_model import env, model
 

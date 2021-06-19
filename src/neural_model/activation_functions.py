@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from src.ConvNet.layer_classes import LayerBase
+from src.neural_model.layer_classes import LayerBase
 import numpy as np
 
 
