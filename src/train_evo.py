@@ -15,7 +15,7 @@ if __name__ == '__main__':
     env = TrackRunner.TrackRunnerEnv(run_velocity=0.015, turn_degrees=15, track=track, max_steps=200)
     # env = Pong.PongEnv(ball_speed=0.02, left_paddle_speed=0.02, right_paddle_speed=0.01, games_per_match=1)
 
-    evo_net = setup_fc_model(input_size=env.state_vector_dimension, output_size=env.number_of_actions)
+    evo_net = setup_fc_model(input_size=env.state_vector_dimension, output_size=env.number_of_actions,hidden_layers_dims=[50,10])
     # nullify_qs(evo_net, env)
 
     fitness = EvoFitnessRL(env, evo_net)

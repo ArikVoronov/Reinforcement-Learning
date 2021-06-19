@@ -12,8 +12,8 @@ if __name__ == '__main__':
 
     # Setup agent
     agent_weights_file_path = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\rl_agents\TrackRunnerEnv_2021_06_18-10_42\agent_parameters_1100_fitness_20_10.pkl'
-    agent_weights_file_path = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\evo_agents\TrackRunnerEnv_2021_06_18-13_37\agent_parameters_8_fitness_-1_01.pkl'
-    apx = setup_fc_model(input_size=env.state_vector_dimension, output_size=env.number_of_actions)
+    agent_weights_file_path = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\evo_agents\TrackRunnerEnv_2021_06_19-20_32\agent_parameters_5_fitness_-1_01.pkl'
+    apx = setup_fc_model(input_size=env.state_vector_dimension, output_size=env.number_of_actions,hidden_layers_dims=[50,50])
     agent = NeuralNetworkAgent(apx=apx)
     agent.load_weights(agent_weights_file_path)
 

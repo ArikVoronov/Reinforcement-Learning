@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
     # Build Env
     track = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\src\Envs\Tracks\tracky.pkl'
-    env = TrackRunner.TrackRunnerEnv(run_velocity=0.02, turn_degrees=20, track=track, max_steps=200)
+    env = TrackRunner.TrackRunnerEnv(run_velocity=0.015, turn_degrees=15, track=track, max_steps=200)
     # env = Pong.PongEnv(ball_speed=0.02, left_paddle_speed=0.02, right_paddle_speed=0.01, games_per_match=10)
 
     # env= envs.Pong()
@@ -51,7 +51,7 @@ if __name__ == '__main__':
     # linear_approximator = TDL_Linear.LinearApproximator(nS=env.state_vector_dimension, nA=3, learningRate=1e-3,
     #                                                     featurize=None,
     #                                                     saveFile=None)
-    q_net_apx = setup_fc_model(input_size=env.state_vector_dimension, output_size=env.number_of_actions,
+    q_net_apx = setup_fc_model(input_size=env.state_vector_dimension, output_size=env.number_of_actions,hidden_layers_dims=[50,10],
                                save_file=save_file)
     # decoupled_network = DecoupledNN(learningRate=5e-4, batchSize=500, batches=20, maxEpochs=100,
     #                                 netLanes=env.number_of_actions, layerSizes=[200],
@@ -75,7 +75,7 @@ if __name__ == '__main__':
         #         maxEpisodes=max_episodes, printoutEps=10, featurize=None,
         #         experienceCacheSize=100, experienceBatchSize=10, QCopyEpochs=50),
 
-        QL.CLF(q_net_apx, model_learning_rate=0.005, number_of_actions=env.number_of_actions, reward_discount=0.95,
+        QL.CLF(q_net_apx, model_learning_rate=0.01, number_of_actions=env.number_of_actions, reward_discount=0.95,
                epsilon=0.3,
                epsilon_decay=0.95,
                max_episodes=max_episodes, printout_episodes=100, featurize=None, output_dir_path=OUTPUT_DIR)
@@ -85,4 +85,4 @@ if __name__ == '__main__':
     print('\nRL Optimization')
     for i in range(len(clfs)):
         print('\nTraining Classifier #', i + 1)
-        clfs[i].train(env)
+        clfs[i].train(env,check_grad=False)

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from src.Regressors.LinearReg import LinReg
 from src.utils.rl_utils import setup_fc_model
 
-from src.ConvNet.utils import train
+from src.ConvNet.utils import train_model
 from src.ConvNet.optim import SGD
 from src.evo.evo_utils import EvoFitnessLinearRegression
 from src.evo.genetic_algorithm import GeneticOptimizer
@@ -37,7 +37,7 @@ def main():
 
     model_nn = setup_fc_model(input_size=features, output_size=1)
     optimizer = SGD(layers=model_nn.layers_list, learning_rate=0.01)
-    train(Xi.T, yi[None,:], model_nn, epochs=2, optimizer=optimizer, batch_size=256)
+    train_model(Xi.T, yi[None, :], model_nn, epochs=2, optimizer=optimizer, batch_size=256)
     y_pred = model_nn(Xi.T)
     error = np.mean((y_pred - yi) ** 2)
     print(f'NN regression error: {error:.2f}')

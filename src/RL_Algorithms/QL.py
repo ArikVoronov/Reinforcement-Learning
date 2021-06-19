@@ -5,7 +5,7 @@ import datetime
 import numpy as np
 from src.ConvNet.optim import SGD
 from tqdm import tqdm
-
+from src.ConvNet.utils import grad_check
 
 class CLF:
     def __init__(self, apx, number_of_actions, model_learning_rate,
@@ -32,7 +32,7 @@ class CLF:
     def load_weights(self, weights_file_path):
         self.q_approximator.load_parameters_from_file(weights_file_path)
 
-    def train(self, env):
+    def train(self, env, check_grad=False):
         if self._output_dir is not None:
             FORMAT = "%Y_%m_%d-%H_%M"
             ts = datetime.datetime.now().strftime(FORMAT)
@@ -52,7 +52,7 @@ class CLF:
                 action = self.pick_action(state)
                 next_state, reward, done = env.step(action)
                 next_state = self.featurize(next_state).reshape([-1, 1])
-                self.optimize_step(state, next_state, reward, action)
+                self.optimize_step(state, next_state, reward, action,check_grad)
                 state = next_state
                 episode_steps += 1
                 episode_reward += reward
@@ -76,7 +76,7 @@ class CLF:
                                     pickle.dump(best_parameters, file)
                     break
 
-    def optimize_step(self, state, next_state, reward, action):
+    def optimize_step(self, state, next_state, reward, action,check_grad):
         self.optimizer.zero_grad()
         # Forward pass
         q_next = self.q_approximator(next_state)
@@ -87,6 +87,8 @@ class CLF:
         # Backward pass
         self.q_approximator.calculate_loss(y, q_current)
         self.q_approximator.backward()
+        if check_grad:
+            grad_check(model=self.q_approximator, x_batch=state, y_batch=y)
         self.optimizer.step()
 
     def epsilon_policy(self, state):

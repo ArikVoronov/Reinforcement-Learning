@@ -50,7 +50,7 @@ def grad_check(model, x_batch, y_batch):
     dw_approx = (cost2 - cost1) / (eps)
     dw_net = model.layers_list[L].dw[i, j]
     error = (dw_approx - dw_net) / (np.abs(dw_approx) + np.abs(dw_net) + eps)
-    print(f'dw aprx {dw_approx:3.3f}; dw net {dw_net:3.3f}; grad check error {error * 100:1.1f}%')
+    print(f'dw aprx {dw_approx:.7f}; dw net {dw_net:.7f}; grad check error {error * 100:1.1f}%')
     return dw_approx
 
 
@@ -69,7 +69,7 @@ class DataLoader:
         return x_batch, y_batch
 
 
-def train(x, y, model, epochs, optimizer, batch_size=None, do_grad_check=False):
+def train_model(x, y, model, epochs, optimizer, batch_size=None, do_grad_check=False):
     if batch_size is None or batch_size >= x.shape[-1]:
         batch_size = x.shape[-1]
     # Begin optimization iterations

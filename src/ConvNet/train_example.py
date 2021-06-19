@@ -2,11 +2,11 @@ import numpy as np
 
 from src.ConvNet.activation_functions import ReLu, Softmax
 from src.ConvNet.layer_classes import FullyConnectedLayer
-from src.ConvNet.losses import NLLoss
+from src.ConvNet.losses import NLLoss,MSELoss
 from src.ConvNet.model import Model
 
 from src.ConvNet.optim import SGD
-from src.ConvNet.utils import squish_range, normalize, make_one_hot_vector, train
+from src.ConvNet.utils import squish_range, normalize, make_one_hot_vector, train_model
 import torchvision.datasets as datasets
 
 
@@ -37,7 +37,7 @@ def main():
 
     batch_size = 4096
     epochs = 20  # Irrelevant to RL
-    train(x, y, model=model, epochs=epochs, batch_size=batch_size, optimizer=optimizer, do_grad_check=False)
+    train_model(x, y, model=model, epochs=epochs, batch_size=batch_size, optimizer=optimizer, do_grad_check=False)
 
 
 def make_example_net():
