@@ -7,6 +7,7 @@ from src.neural_model.optim import SGD
 from tqdm import tqdm
 from src.neural_model.utils import grad_check
 
+
 class CLF:
     def __init__(self, apx, number_of_actions, model_learning_rate,
                  reward_discount=0.9, epsilon=0.1, epsilon_decay=1,
@@ -32,7 +33,7 @@ class CLF:
     def load_weights(self, weights_file_path):
         self.q_approximator.load_parameters_from_file(weights_file_path)
 
-    def train(self, env, check_grad=False):
+    def train(self, env, batch_size, check_grad=False):
         if self._output_dir is not None:
             FORMAT = "%Y_%m_%d-%H_%M"
             ts = datetime.datetime.now().strftime(FORMAT)
@@ -47,15 +48,32 @@ class CLF:
             state = self.featurize(state).reshape([-1, 1])
             episode_steps = 0
             episode_reward = 0
+            done = False
 
             while True:
-                action = self.pick_action(state)
-                next_state, reward, done = env.step(action)
-                next_state = self.featurize(next_state).reshape([-1, 1])
-                self.optimize_step(state, next_state, reward, action,check_grad)
-                state = next_state
-                episode_steps += 1
-                episode_reward += reward
+                optimization_arrays_dict = {
+                    'action': list(),
+                    'state': list(),
+                    'next_state': list(),
+                    'reward': list()
+
+                }
+
+                for batch_n in range(batch_size):
+                    action = self.pick_action(state)
+                    next_state, reward, done = env.step(action)
+                    for k, v in optimization_arrays_dict.items():
+                        optimization_arrays_dict[k].append(locals()[k])
+                    state = next_state
+                    episode_steps += 1
+                    episode_reward += reward
+                    if done:
+                        break
+
+                for k, v in optimization_arrays_dict.items():
+                    optimization_arrays_dict[k] = np.hstack(v)
+                self.optimize_step(optimization_arrays_dict, check_grad)
+
                 if done:
                     self.episode_steps_list.append(episode_steps)
                     self.episode_reward_list.append(episode_reward)
@@ -69,20 +87,30 @@ class CLF:
                             best_parameters = self.q_approximator.get_parameters()
                             best_reward = episode_reward
                             if self._output_dir is not None:
-                                best_rewardd_str = str(f'{best_reward:.2f}'.replace('.', '_'))
-                                agent_name = f'agent_parameters_{episode}_fitness_{best_rewardd_str}.pkl'
+                                best_reward_str = str(f'{best_reward:.2f}'.replace('.', '_'))
+                                agent_name = f'agent_parameters_{episode}_fitness_{best_reward_str}.pkl'
                                 full_output_path = os.path.join(self._output_dir, agent_name)
                                 with open(full_output_path, "wb") as file:
                                     pickle.dump(best_parameters, file)
                     break
 
-    def optimize_step(self, state, next_state, reward, action,check_grad):
+    def optimize_step(self, optimization_arrays_dict, check_grad):
+
+        next_state = optimization_arrays_dict['next_state']
+        state = optimization_arrays_dict['state']
+        action = optimization_arrays_dict['action']
+        reward = optimization_arrays_dict['reward']
+        samples = state.shape[1]
+
+
         self.optimizer.zero_grad()
         # Forward pass
         q_next = self.q_approximator(next_state)
         q_current = self.q_approximator(state)  # current after next to save forward context
         y = q_current.copy()
-        y[action] = reward + self.reward_discount * np.max(q_next)
+        targets = reward + self.reward_discount * np.max(q_next,axis=0)
+        for sample in range(samples):
+            y[action[sample],sample] = targets[sample]
 
         # Backward pass
         self.q_approximator.calculate_loss(y, q_current)

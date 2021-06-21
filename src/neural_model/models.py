@@ -38,6 +38,8 @@ class Model:
         return loss
 
     def set_parameters(self, parameters_list):
+        if len(parameters_list)!=len(self.layers_list):
+            raise Exception('parameters do not fit the fc model')
         for layer_number in range(len(self.layers_list)):
             self.layers_list[layer_number].set_parameters(parameters_list[layer_number])
 

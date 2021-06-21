@@ -11,7 +11,7 @@ env = TrackRunner.TrackRunnerEnv(run_velocity=0.015, turn_degrees=15, track=trac
 # Create Approximators
 save_file = None
 model = setup_fc_model(input_size=env.state_vector_dimension, output_size=env.number_of_actions,
-                       hidden_layers_dims=[50, 10],
+                       hidden_layers_dims=[50],
                        save_file=save_file)
 # Approximators
 if save_file is None:
