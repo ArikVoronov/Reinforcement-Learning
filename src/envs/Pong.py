@@ -2,7 +2,7 @@ import numpy as np
 import pygame
 
 from src.envs.consts import *
-from src.envs.env_utils import run_env, HumanController
+from src.envs.env_utils import run_env_with_display, HumanController
 
 
 # Game object classes
@@ -304,4 +304,4 @@ if __name__ == "__main__":
     key_map = {'K_UP': 1, 'K_DOWN': 2}
     human_player = HumanController(key_map=key_map)
     agent = human_player.pick_action
-    run_env(runs=1, env=env, agent=agent)
+    run_env_with_display(runs=1, env=env, agent=agent)

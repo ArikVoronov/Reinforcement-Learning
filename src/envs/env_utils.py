@@ -1,5 +1,5 @@
 import os
-
+from tqdm import tqdm
 import pygame
 
 
@@ -24,7 +24,20 @@ class HumanController:
         return action
 
 
-def run_env(runs, env, agent, frame_rate=25, display_size=(800, 600)):
+def run_env(env, agent):
+    state = env.reset()
+    reward_total = 0
+    exit_run = False
+    while not exit_run:
+        action = agent(state)
+        state, reward, done = env.step(action)
+        reward_total += reward
+        if done:
+            exit_run = True
+    return reward_total
+
+
+def run_env_with_display(runs, env, agent, frame_rate=25, display_size=(800, 600)):
     pygame.init()
     # Display
     display_width = display_size[0]
@@ -35,36 +48,34 @@ def run_env(runs, env, agent, frame_rate=25, display_size=(800, 600)):
     pygame.display.set_caption("Track Runner")
     clock = pygame.time.Clock()
 
-    state = env.reset()
-    run_count = 0
-    reward_total = 0
-    exit_run = False
-    run_state = 'RUNNING'
-    while not exit_run:
-        events = pygame.event.get()
-        for event in events:
-            if event.type == pygame.QUIT:
-                exit_run = True
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_p:
-                    run_state = 'PAUSED'
-                if event.key == pygame.K_o:
-                    run_state = 'RUNNING'
-                if event.key == pygame.K_q:
+    pbar = tqdm(range(runs))
+    for run_count in pbar:
+        state = env.reset()
+        reward_total = 0
+        exit_run = False
+        run_state = 'RUNNING'
+        while not exit_run:
+            events = pygame.event.get()
+            for event in events:
+                if event.type == pygame.QUIT:
                     exit_run = True
-        if run_state == 'RUNNING':
-            action = agent(state)
-            state, reward, done = env.step(action)
-            reward_total += reward
-            if done:
-                run_count += 1
-                print("Run# {} ; Steps {} ; Total Reward {}".format(run_count, env.steps, reward_total))
-                env.reset()
-                reward_total = 0
-            # Rendering
-            env.render(game_display)
-            pygame.display.update()
-            clock.tick(frame_rate)
-            if run_count >= runs:
-                exit_run = True
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_p:
+                        run_state = 'PAUSED'
+                    if event.key == pygame.K_o:
+                        run_state = 'RUNNING'
+                    if event.key == pygame.K_q:
+                        exit_run = True
+            if run_state == 'RUNNING':
+                action = agent(state)
+                state, reward, done = env.step(action)
+                reward_total += reward
+                if done:
+                    exit_run = True
+                # Rendering
+                env.render(game_display)
+                pygame.display.update()
+                clock.tick(frame_rate)
+        pbar.desc = f"Run# {run_count} ; Steps {env.steps} ; Total Reward {reward_total}"
     pygame.quit()
+    return reward_total

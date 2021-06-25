@@ -3,7 +3,7 @@ import pygame
 
 from src.envs.TrackBuilder import Track, CoordinateTransformer
 from src.envs.consts import *
-from src.envs.env_utils import run_env, HumanController
+from src.envs.env_utils import run_env_with_display, HumanController
 
 
 def get_line_parameters(pos, angle):
@@ -189,7 +189,8 @@ class TrackRunnerEnv:
         self.reset()
 
     def reset(self):
-        self.player = Player(self.track.starting_position, self.track.starting_direction, self.track, self.runVelocity,
+        starting_direction = self.track.starting_direction + 10*2*(np.random.rand()-0.5)
+        self.player = Player(self.track.starting_position, starting_direction, self.track, self.runVelocity,
                              self.turnDegrees)
         self.done = False
         self.steps = 0
@@ -247,4 +248,4 @@ if __name__ == "__main__":
     human_player = HumanController()
     agent = human_player.pick_action
     env = TrackRunnerEnv(run_velocity, turn_degrees, track)
-    run_env(runs=2, env=env, agent=agent, frame_rate=10)
+    run_env_with_display(runs=2, env=env, agent=agent, frame_rate=10)

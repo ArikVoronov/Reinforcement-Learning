@@ -6,6 +6,8 @@ import numpy as np
 from src.neural_model.optim import SGD
 from tqdm import tqdm
 from src.neural_model.utils import grad_check
+from src.utils.rl_utils import NeuralNetworkAgent
+from src.envs.env_utils import run_env
 
 
 class CLF:
@@ -43,9 +45,11 @@ class CLF:
             os.makedirs(self._output_dir, exist_ok=True)
             print(f'parameters will be saved to {self._output_dir}')
         pbar = tqdm(range(self.max_episodes))
+        best_parameters = None
+        best_reward = None
         for episode in pbar:
             state = env.reset()
-            state = self.featurize(state).reshape([-1, 1])
+            # state = self.featurize(state).reshape([-1, 1])
             episode_steps = 0
             episode_reward = 0
             done = False
@@ -70,11 +74,16 @@ class CLF:
                     if done:
                         break
 
-                for k, v in optimization_arrays_dict.items():
-                    optimization_arrays_dict[k] = np.hstack(v)
-                self.optimize_step(optimization_arrays_dict, check_grad)
+
 
                 if done:
+                    if episode > 0:
+                        if episode_reward > max(self.episode_reward_list[-self.printout_episodes:]):
+                            best_parameters = copy.deepcopy(self.q_approximator.get_parameters())
+                            best_reward = episode_reward
+                            agent = NeuralNetworkAgent(apx=self.q_approximator)
+                            reward_total = run_env(env=env, agent=agent.pick_action)
+                            # print(f'best reward {best_reward} actual total_reward {reward_total}')
                     self.episode_steps_list.append(episode_steps)
                     self.episode_reward_list.append(episode_reward)
 
@@ -84,14 +93,21 @@ class CLF:
                     if self.printout_episodes is not None:
                         if (episode % self.printout_episodes == 0) and episode > 0:
                             self.epsilon = np.maximum(0.001, self.epsilon * self.epsilon_decay)
-                            best_parameters = self.q_approximator.get_parameters()
-                            best_reward = episode_reward
+
                             if self._output_dir is not None:
-                                best_reward_str = str(f'{best_reward:.2f}'.replace('.', '_'))
-                                agent_name = f'agent_parameters_{episode}_fitness_{best_reward_str}.pkl'
-                                full_output_path = os.path.join(self._output_dir, agent_name)
-                                with open(full_output_path, "wb") as file:
-                                    pickle.dump(best_parameters, file)
+                                if best_parameters is not None:
+                                    best_reward_str = str(f'{best_reward:.2f}'.replace('.', '_'))
+                                    agent_name = f'agent_parameters_{episode}_fitness_{best_reward_str}.pkl'
+                                    # print(agent_name)
+                                    full_output_path = os.path.join(self._output_dir, agent_name)
+                                    with open(full_output_path, "wb") as file:
+                                        pickle.dump(best_parameters, file)
+                                    best_parameters = None
+                                    best_reward = None
+                for k, v in optimization_arrays_dict.items():
+                    optimization_arrays_dict[k] = np.hstack(v)
+                self.optimize_step(optimization_arrays_dict, check_grad)
+                if done:
                     break
 
     def optimize_step(self, optimization_arrays_dict, check_grad):
@@ -102,15 +118,14 @@ class CLF:
         reward = optimization_arrays_dict['reward']
         samples = state.shape[1]
 
-
         self.optimizer.zero_grad()
         # Forward pass
         q_next = self.q_approximator(next_state)
         q_current = self.q_approximator(state)  # current after next to save forward context
         y = q_current.copy()
-        targets = reward + self.reward_discount * np.max(q_next,axis=0)
+        targets = reward + self.reward_discount * np.max(q_next, axis=0)
         for sample in range(samples):
-            y[action[sample],sample] = targets[sample]
+            y[action[sample], sample] = targets[sample]
 
         # Backward pass
         self.q_approximator.calculate_loss(y, q_current)
@@ -133,3 +148,9 @@ class CLF:
         action_probability = self.epsilon_policy(state)
         action = np.random.choice(self.number_of_actions, p=action_probability)
         return action
+    #
+    # def pick_action(self, state):
+    #     q = self.q_approximator(state).squeeze()
+    #     best_action = np.argwhere(q == np.amax(q))
+    #     return best_action[0][0]
+

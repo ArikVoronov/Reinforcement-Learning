@@ -127,4 +127,4 @@ class NeuralNetworkAgent:
     def pick_action(self, state):
         q = self.q_approximator(state).squeeze()
         best_action = np.argwhere(q == np.amax(q))
-        return best_action
+        return best_action[0][0]
