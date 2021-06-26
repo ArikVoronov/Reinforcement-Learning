@@ -7,23 +7,23 @@ import matplotlib.pyplot as plt
 from collections import namedtuple, deque
 from itertools import count
 from PIL import Image
-from tqdm import tqdm
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import torchvision.transforms as T
+from tqdm import tqdm
+
+torch.manual_seed(42)
+np.random.seed(42)
 
 env = gym.make('CartPole-v0').unwrapped
 
-from gym import wrappers
-
-env = wrappers.Monitor(env, './', video_callable=False, force=True)
-# plt.ion()
+plt.ion()
 
 # if gpu is to be used
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
 
@@ -87,12 +87,9 @@ def get_cart_location(screen_width):
 
 
 def get_screen():
-    # return torch.zeros([1, 3, 40, 90])
-
     # Returned screen requested by gym is 400x600x3, but is sometimes larger
     # such as 800x1200x3. Transpose it into torch order (CHW).
     screen = env.render(mode='rgb_array').transpose((2, 0, 1))
-    # screen = torch.zeros([3, 400, 600])
     # Cart is in the lower half, so strip off the top and bottom of the screen
     _, screen_height, screen_width = screen.shape
     screen = screen[:, int(screen_height * 0.4):int(screen_height * 0.8)]
@@ -116,11 +113,11 @@ def get_screen():
 
 
 env.reset()
-# plt.figure()
-# plt.imshow(get_screen().cpu().squeeze(0).permute(1, 2, 0).numpy(),
-#            interpolation='none')
-# plt.title('Example extracted screen')
-# plt.show()
+plt.figure()
+plt.imshow(get_screen().cpu().squeeze(0).permute(1, 2, 0).numpy(),
+           interpolation='none')
+plt.title('Example extracted screen')
+plt.show()
 
 BATCH_SIZE = 128
 GAMMA = 0.999
@@ -134,8 +131,7 @@ TARGET_UPDATE = 10
 # which is the result of a clamped and down-scaled render buffer in get_screen()
 init_screen = get_screen()
 _, _, screen_height, screen_width = init_screen.shape
-screen_height = 40
-screen_width = 90
+
 # Get number of actions from gym action space
 n_actions = env.action_space.n
 
@@ -169,21 +165,25 @@ def select_action(state):
 episode_durations = []
 
 
-# def plot_durations():
-#     plt.figure(2)
-#     plt.clf()
-#     durations_t = torch.tensor(episode_durations, dtype=torch.float)
-#     plt.title('Training...')
-#     plt.xlabel('Episode')
-#     plt.ylabel('Duration')
-#     plt.plot(durations_t.numpy())
-#     # Take 100 episode averages and plot them too
-#     if len(durations_t) >= 100:
-#         means = durations_t.unfold(0, 100, 1).mean(1).view(-1)
-#         means = torch.cat((torch.zeros(99), means))
-#         plt.plot(means.numpy())
-#
-#     plt.pause(0.001)  # pause a bit so that plots are updated
+def plot_durations():
+    plt.figure(2)
+    plt.clf()
+    durations_t = torch.tensor(episode_durations, dtype=torch.float)
+    plt.title('Training...')
+    plt.xlabel('Episode')
+    plt.ylabel('Duration')
+    plt.plot(durations_t.numpy())
+    # Take 100 episode averages and plot them too
+    if len(durations_t) >= 100:
+        means = durations_t.unfold(0, 100, 1).mean(1).view(-1)
+        means = torch.cat((torch.zeros(99), means))
+        plt.plot(means.numpy())
+
+    plt.pause(0.001)  # pause a bit so that plots are updated
+    # if is_ipython:
+    #     display.clear_output(wait=True)
+    #     display.display(plt.gcf())
+
 
 def optimize_model():
     if len(memory) < BATCH_SIZE:
@@ -232,23 +232,21 @@ def optimize_model():
 
 
 num_episodes = 50
+total_reward = list()
 pbar = tqdm(range(num_episodes))
 for i_episode in pbar:
+    episode_reward = 0
     # Initialize the environment and state
     env.reset()
     last_screen = get_screen()
     current_screen = get_screen()
     state = current_screen - last_screen
-
-    total_reward = 0
-
     for t in count():
-
         # Select and perform an action
         action = select_action(state)
-        state, reward, done, _ = env.step(action.item())
+        _, reward, done, _ = env.step(action.item())
         reward = torch.tensor([reward], device=device)
-        total_reward += reward
+        episode_reward += reward.cpu()[0].numpy()
 
         # Observe new state
         last_screen = current_screen
@@ -267,13 +265,14 @@ for i_episode in pbar:
         # Perform one step of the optimization (on the policy network)
         optimize_model()
         if done:
+            total_reward.append(episode_reward)
             episode_durations.append(t + 1)
             # plot_durations()
             break
     # Update the target network, copying all weights and biases in DQN
+    pbar.desc = f"epoch {i_episode}, total reward {np.mean(total_reward):.3f}"
     if i_episode % TARGET_UPDATE == 0:
         target_net.load_state_dict(policy_net.state_dict())
-    pbar.desc = f"epoch {i_episode}, total reward {total_reward.cpu()[0]}"
 
 print('Complete')
 env.render()
