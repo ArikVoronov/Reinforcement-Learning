@@ -1,6 +1,6 @@
 from src.envs.env_utils import run_env_with_display
 from src.utils.rl_utils import NeuralNetworkAgent
-from src.core.setup_env_and_model import env, model
+from src.utils.setup_env_and_model import env, model
 
 if __name__ == '__main__':
     # Setup agent

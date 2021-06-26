@@ -1,7 +1,7 @@
 from src.evo.evo_utils import EvoFitnessRL
 from src.evo.genetic_algorithm import GeneticOptimizer
 
-from src.core.setup_env_and_model import env, model
+from src.utils.setup_env_and_model import env, model
 
 OUTPUT_DIR = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\evo_agents'
 

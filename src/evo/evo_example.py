@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from src.regressors.linear_regressor import LinearRegressor
-from src.utils.rl_utils import setup_fc_model
+from src.utils.setup_env_and_model import setup_fc_model
 
 from src.neural_model.utils import train_model
 from src.neural_model.optim import SGD

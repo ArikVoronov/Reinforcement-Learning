@@ -1,5 +1,5 @@
 from src.rl_algorithms import QL
-from src.core.setup_env_and_model import env, model
+from src.utils.setup_env_and_model import env, model
 
 OUTPUT_DIR = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\rl_agents'
 MAX_EPISODES = 50000
