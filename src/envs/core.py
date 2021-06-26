@@ -7,7 +7,6 @@ class EnvBase(ABC):
         self.state = None
         self.done = False
         self.reward = 0
-        self.steps = 0
         self.coordinate_transformer = None
 
     @abstractmethod
