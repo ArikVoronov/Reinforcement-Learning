@@ -4,26 +4,9 @@ import numpy as np
 import pickle
 
 from src.envs.consts import *
+from src.envs.env_utils import CoordinateTransformer
 
 DEFAULT_TRACKS_FOLDER_PATH = '.\\Tracks'
-
-
-class CoordinateTransformer:
-    def __init__(self, display):
-        display_width, display_height = display.get_size()
-        self._display_width = display_width
-        self._display_height = display_height
-
-    def cartesian_to_screen(self, point):
-        # Translate cartesian normalized coordinates to pygame screen coordinates
-        x = int(point[0] * self._display_width)
-        y = int((1 - point[1]) * self._display_height)
-        return [x, y]
-
-    def screen_to_cartesian(self, point):
-        x = float(point[0]) / self._display_width
-        y = 1 - float(point[1]) / self._display_height
-        return [x, y]
 
 
 class Vertex:

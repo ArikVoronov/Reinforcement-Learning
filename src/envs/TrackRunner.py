@@ -1,57 +1,86 @@
 import numpy as np
 import pygame
 
-from src.envs.TrackBuilder import Track, CoordinateTransformer
+from src.envs.TrackBuilder import Track
 from src.envs.consts import *
-from src.envs.env_utils import run_env_with_display, HumanController
+from src.envs.env_utils import run_env_with_display, HumanController, CoordinateTransformer
+from src.envs.core import EnvBase
 
 
-def get_line_parameters(pos, angle):
-    # Get line eq parameters y = m*x + n from point coordinates and angle
-    coefficient, intersection = None, None
-    if angle not in [-90, 90]:
-        coefficient = np.tan(angle * np.pi / 180)
-        intersection = pos[1] - coefficient * pos[0]
-    return coefficient, intersection
+class TrackRunnerEnv(EnvBase):
+    PER_STEP_REWARD = 0.01
 
+    def __init__(self, run_velocity, turn_degrees, track, max_steps=None, verbose=False):
+        super(TrackRunnerEnv, self).__init__()
+        if isinstance(track, Track):
+            self.track = track
+        elif type(track) == str:
+            self.track = Track.load(track)
+        else:
+            raise TypeError(f'track type must be string or {Track}')
+        self.turn_degrees = turn_degrees
+        self.run_velocity = run_velocity
+        self.number_of_actions = 3
+        self.state_vector_dimension = 5
+        if max_steps is None:
+            self.max_steps = np.inf
+        else:
+            self.max_steps = max_steps
+        self._verbose = verbose
+        self.player = None
 
-def get_intersection_between_lines(m1, n1, m2, n2):
-    # Get calculated point of intersection between 2 lines
-    x = - (n2 - n1) / (m2 - m1 + 1e-20)
-    y = m2 * x + n2
-    return x, y
+        self.reset()
 
+    def reset(self):
+        self.done = False
+        self.steps = 0
+        starting_direction = self.track.starting_direction + 10 * 2 * (np.random.rand() - 0.5)
+        self.player = Player(self.track.starting_position, starting_direction, self.track, self.run_velocity,
+                             self.turn_degrees)
+        self.player.sensor_readings_dict = self.player.get_sensor_readings()
+        self.state = self.get_state()
+        return self.state
 
-def fix_to_180(angle):
-    # Fix angle to be in range between -180 and 180
-    new_angle = angle
-    while new_angle > 180:
-        new_angle -= 360
-    while new_angle < -180:
-        new_angle += 360
-    return new_angle
+    def step(self, action=-1):
+        self.steps += 1
+        self.player.update(action)
+        self.get_state()
+        self.reward = self.get_reward()
+        if self.steps > self.max_steps:
+            if self._verbose:
+                print('Timed out')
+            self.done = True
+        if self.player.collide:
+            self.done = True
+        return self.state, self.reward, self.done
 
+    def get_reward(self):
+        factor = self.player.speed / self.player.initial_speed  # factor=1 for constant speed
+        reward = 1 / self.max_steps
+        # if self.player.collide:
+        #     reward += -1
+        return reward
 
-def check_in_line(point, vertices):
-    # Check if point is inside of line defined by 2 vertices
-    in_line = False
-    v1 = vertices[0] - point
-    v2 = vertices[1] - point
-    dot_product = np.dot(v1, v2) / (np.linalg.norm(v1, 2) * np.linalg.norm(v2, 2) + 1e-20)
-    if np.abs(dot_product + 1) < 0.01:
-        in_line = True
-    return in_line
+    def get_state(self):
+        self.state = np.zeros([self.state_vector_dimension, 1])
+        for i, sensor_readings in enumerate(self.player.sensor_readings_dict.values()):
+            self.state[i] = sensor_readings['distance']
+        return self.state
 
+    def render(self, game_display):
+        if self.coordinate_transformer is None:
+            self.coordinate_transformer = CoordinateTransformer(game_display)
 
-def dist_to_point(p1, p2):
-    # Distance between 2 points
-    d = np.sqrt((p2[1] - p1[1]) ** 2 + (p2[0] - p1[0]) ** 2)
-    return d
-
-
-def dist_to_line(point, m, n):
-    d = np.abs(point[1] - m * point[0] - n) / (np.sqrt(1 + m ** 2))
-    return d
+        game_display.fill(COLORS_DICT['black'])
+        self.track.render(game_display)
+        self.player.render(game_display)
+        # Sensed points
+        if len(self.player.sensor_readings_dict) > 0:
+            for sensor_readings in self.player.sensor_readings_dict.values():
+                sensor_position = sensor_readings['position']
+                if sensor_position is not None:
+                    pygame.draw.circle(game_display, COLORS_DICT['gray'],
+                                       self.coordinate_transformer.cartesian_to_screen(sensor_position), 5)
 
 
 class Player:
@@ -72,15 +101,15 @@ class Player:
         self.sensor_readings_dict = dict()
         self.sensor_angles = self.SENSOR_ANGLES
         self.all_lines = []
-        for l in self.line_lists:
-            self.all_lines += l
+        for line_list in self.line_lists:
+            self.all_lines += line_list
         line_parameters = [[line.m, line.n] for line in self.all_lines]
         line_parameters = np.array(line_parameters)
         self.lines_m = line_parameters[:, 0]
         self.lines_n = line_parameters[:, 1]
 
     def update(self, action):
-        # Actions : 0 - Nothing; 1 - Left ; 2 - Right ;  3 - Accelerate ; 4 - Decelerate ; 
+        # Actions : 0 - Nothing; 1 - Left ; 2 - Right ;  3 - Accelerate ; 4 - Decelerate ;
         if action == 1:
             self.direction += self.turn_degrees
         if action == 2:
@@ -91,7 +120,7 @@ class Player:
             self.speed -= self.acceleration
         self.vel = (np.cos(self.direction * np.pi / 180), np.sin(self.direction * np.pi / 180))
         self.position += np.array([self.vel[0] * self.speed, self.vel[1] * self.speed])
-        self.sensor_readings_dict = self._get_sensor_readings()
+        self.sensor_readings_dict = self.get_sensor_readings()
         self._collision_detection()
 
     @staticmethod
@@ -104,7 +133,7 @@ class Player:
             angle = -90.1
         return angle
 
-    def _get_sensor_readings(self):
+    def get_sensor_readings(self):
         sensor_readings_dict = dict()
         for sensor_angle in self.sensor_angles:
             sensor_position = [0.5, 0.5]
@@ -163,89 +192,63 @@ class Player:
         pygame.draw.circle(game_display, COLORS_DICT['green'], transform(self.position), 5)
 
 
-class TrackRunnerEnv:
-    PER_STEP_REWARD = 0.01
-
-    def __init__(self, run_velocity, turn_degrees, track, max_steps=None, verbose=False):
-        self.coordinate_transformer = None
-        if isinstance(track, Track):
-            self.track = track
-        elif type(track) == str:
-            self.track = Track.load(track)
-        else:
-            raise TypeError(f'track type must be string or {Track}')
-
-        self.turnDegrees = turn_degrees
-        self.runVelocity = run_velocity
-        self.number_of_actions = 3
-        self.state_vector_dimension = 5
-        self.reward = 0
-        if max_steps is None:
-            self.max_steps = np.inf
-        else:
-            self.max_steps = max_steps
-        self._verbose = verbose
-
-        self.reset()
-
-    def reset(self):
-        starting_direction = self.track.starting_direction + 10*2*(np.random.rand()-0.5)
-        self.player = Player(self.track.starting_position, starting_direction, self.track, self.runVelocity,
-                             self.turnDegrees)
-        self.done = False
-        self.steps = 0
-        self.player.sensor_readings_dict = self.player._get_sensor_readings()
-        self.state = self.get_state()
-        return self.state
-
-    def step(self, action=-1):
-        self.steps += 1
-        self.player.update(action)
-        self.get_state()
-        self.reward = self.get_reward()
-        if self.steps > self.max_steps:
-            if self._verbose:
-                print('Timed out')
-            self.done = True
-        if self.player.collide:
-            self.done = True
-        return self.state, self.reward, self.done
-
-    def get_reward(self):
-        factor = self.player.speed / self.player.initial_speed  # factor=1 for constant speed
-        reward = 1 / self.max_steps
-        # if self.player.collide:
-        #     reward += -1
-        return reward
-
-    def get_state(self):
-        self.state = np.zeros([self.state_vector_dimension, 1])
-        for i, sensor_readings in enumerate(self.player.sensor_readings_dict.values()):
-            self.state[i] = sensor_readings['distance']
-        return self.state
-
-    def render(self, game_display):
-        if self.coordinate_transformer is None:
-            self.coordinate_transformer = CoordinateTransformer(game_display)
-
-        game_display.fill(COLORS_DICT['black'])
-        self.track.render(game_display)
-        self.player.render(game_display)
-        # Sensed points
-        if len(self.player.sensor_readings_dict) > 0:
-            for sensor_readings in self.player.sensor_readings_dict.values():
-                sensor_position = sensor_readings['position']
-                if sensor_position is not None:
-                    pygame.draw.circle(game_display, COLORS_DICT['gray'],
-                                       self.coordinate_transformer.cartesian_to_screen(sensor_position), 5)
+def get_line_parameters(pos, angle):
+    # Get line eq parameters y = m*x + n from point coordinates and angle
+    coefficient, intersection = None, None
+    if angle not in [-90, 90]:
+        coefficient = np.tan(angle * np.pi / 180)
+        intersection = pos[1] - coefficient * pos[0]
+    return coefficient, intersection
 
 
-if __name__ == "__main__":
+def get_intersection_between_lines(m1, n1, m2, n2):
+    # Get calculated point of intersection between 2 lines
+    x = - (n2 - n1) / (m2 - m1 + 1e-20)
+    y = m2 * x + n2
+    return x, y
+
+
+def fix_to_180(angle):
+    # Fix angle to be in range between -180 and 180
+    new_angle = angle
+    while new_angle > 180:
+        new_angle -= 360
+    while new_angle < -180:
+        new_angle += 360
+    return new_angle
+
+
+def check_in_line(point, vertices):
+    # Check if point is inside of line defined by 2 vertices
+    in_line = False
+    v1 = vertices[0] - point
+    v2 = vertices[1] - point
+    dot_product = np.dot(v1, v2) / (np.linalg.norm(v1, 2) * np.linalg.norm(v2, 2) + 1e-20)
+    if np.abs(dot_product + 1) < 0.01:
+        in_line = True
+    return in_line
+
+
+def dist_to_point(p1, p2):
+    # Distance between 2 points
+    d = np.sqrt((p2[1] - p1[1]) ** 2 + (p2[0] - p1[0]) ** 2)
+    return d
+
+
+def dist_to_line(point, m, n):
+    d = np.abs(point[1] - m * point[0] - n) / (np.sqrt(1 + m ** 2))
+    return d
+
+
+def run_example():
     track = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\src\Envs\Tracks\tracky.pkl'
-
     run_velocity = 0.01
     turn_degrees = 15
     human_player = HumanController()
     agent = human_player.pick_action
     env = TrackRunnerEnv(run_velocity, turn_degrees, track)
     run_env_with_display(runs=2, env=env, agent=agent, frame_rate=10)
+
+
+if __name__ == "__main__":
+    run_example()
