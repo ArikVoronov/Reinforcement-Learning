@@ -1,0 +1,7 @@
+model_learning_rate: 0.005
+reward_discount: 0.95
+epsilon: 0.9
+epsilon_decay: 0.999
+max_episodes: 5000
+printout_episodes: 50
+output_dir_path: 'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\rl_agents'

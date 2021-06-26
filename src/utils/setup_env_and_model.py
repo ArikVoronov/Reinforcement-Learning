@@ -14,7 +14,7 @@ def setup_fc_model(input_size, output_size, hidden_layers_dims=[50], save_file=N
 
     loss = SmoothL1Loss(beta=0.5)
     # loss = MSELoss()
-    activation_list = [ReLu2] * len(hidden_layers_dims) + [LinearActivation]
+    activation_list = [ReLu2] * len(hidden_layers_dims) + [ReLu2]
     layers_list = [FullyConnectedLayer((input_size, layer_sizes[0])), activation_list[0]()]
     for layer_number in range(1, len(layer_sizes)):
         current_layer_size = (layer_sizes[layer_number - 1], layer_sizes[layer_number])
@@ -49,7 +49,7 @@ np.random.seed(430)
 
 # Build Env
 track = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\src\Envs\Tracks\tracky.pkl'
-env = TrackRunner.TrackRunnerEnv(run_velocity=0.015, turn_degrees=15, track=track, max_steps=200)
+env = TrackRunner.TrackRunnerEnv(run_velocity=0.015, turn_degrees=15, track=track, max_steps=300)
 # env = GymEnvWrapper('CartPole-v0')
 # env= envs.Pong()
 

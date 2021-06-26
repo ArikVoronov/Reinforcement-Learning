@@ -2,12 +2,16 @@ from src.evo.evo_utils import EvoFitnessRL
 from src.evo.genetic_algorithm import GeneticOptimizer
 
 from src.utils.setup_env_and_model import env, model
+from src.core.config import Config
 
-OUTPUT_DIR = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\evo_agents'
+
+def main(path_to_config):
+    config = Config.load_from_yaml(path_to_config)
+    fitness = EvoFitnessRL(env, model)
+    gao = GeneticOptimizer(**config.to_dict())
+    gao.optimize(model.get_parameters(), fitness)
+
 
 if __name__ == '__main__':
-    fitness = EvoFitnessRL(env, model)
-    gao = GeneticOptimizer(specimen_count=200, survivor_count=20, max_iterations=20,
-                           mutation_rate=1, generation_method="Random Splice", fitness_target=-1, output_dir=OUTPUT_DIR)
-
-    gao.optimize(model.get_parameters(), fitness)
+    path = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\configs\train_evo_config.yaml'
+    main(path)

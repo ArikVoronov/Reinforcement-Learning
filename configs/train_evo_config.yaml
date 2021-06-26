@@ -1,0 +1,7 @@
+specimen_count: 200
+survivor_count: 20
+max_iterations: 20
+mutation_rate: 1
+generation_method: "Random Splice"
+fitness_target: -1
+output_dir: 'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\evo_agents'

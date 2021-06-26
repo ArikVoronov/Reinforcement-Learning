@@ -22,6 +22,7 @@ class CLF:
         self.epsilon_0 = epsilon
         self.epsilon_decay = epsilon_decay
         self.max_episodes = max_episodes
+        self.batch_size = None
         self.episode_steps_list = []
         self.episode_reward_list = []
         self.printout_episodes = printout_episodes
@@ -36,6 +37,7 @@ class CLF:
         self.q_approximator.load_parameters_from_file(weights_file_path)
 
     def train(self, env, batch_size, check_grad=False):
+        self.batch_size = batch_size
         if self._output_dir is not None:
             FORMAT = "%Y_%m_%d-%H_%M"
             ts = datetime.datetime.now().strftime(FORMAT)
@@ -74,8 +76,6 @@ class CLF:
                     if done:
                         break
 
-
-
                 if done:
                     if episode > 0:
                         if episode_reward > max(self.episode_reward_list[-self.printout_episodes:]):
@@ -89,7 +89,8 @@ class CLF:
 
                     mean_steps = np.mean(self.episode_steps_list[-self.printout_episodes:])
                     mean_reward = np.mean(self.episode_reward_list[-self.printout_episodes:])
-                    pbar.desc = f'steps {mean_steps:.1f} ; reward {mean_reward:.2f}; epsilon {self.epsilon:.3f}'
+                    mean_w = np.mean(self.q_approximator.layers_list[-2].w)
+                    pbar.desc = f'steps {mean_steps:.1f} ; reward {mean_reward:.2f}; epsilon {self.epsilon:.3f}, mean w = {mean_w}'
                     if self.printout_episodes is not None:
                         if (episode % self.printout_episodes == 0) and episode > 0:
                             self.epsilon = np.maximum(0.001, self.epsilon * self.epsilon_decay)
@@ -117,7 +118,9 @@ class CLF:
         action = optimization_arrays_dict['action']
         reward = optimization_arrays_dict['reward']
         samples = state.shape[1]
-
+        if samples < self.batch_size:
+            # print(f'skipping {samples}')
+            return
         self.optimizer.zero_grad()
         # Forward pass
         q_next = self.q_approximator(next_state)
@@ -148,9 +151,8 @@ class CLF:
         action_probability = self.epsilon_policy(state)
         action = np.random.choice(self.number_of_actions, p=action_probability)
         return action
-    #
+
     # def pick_action(self, state):
     #     q = self.q_approximator(state).squeeze()
     #     best_action = np.argwhere(q == np.amax(q))
     #     return best_action[0][0]
-
