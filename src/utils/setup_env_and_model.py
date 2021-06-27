@@ -1,4 +1,4 @@
-from src.envs import TrackRunner
+from src.envs import track_runner
 import numpy as np
 
 from src.neural_model.activation_functions import ReLu2, LinearActivation
@@ -49,7 +49,7 @@ np.random.seed(430)
 
 # Build Env
 track = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\src\Envs\Tracks\tracky.pkl'
-env = TrackRunner.TrackRunnerEnv(run_velocity=0.015, turn_degrees=15, track=track, max_steps=300)
+env = track_runner.TrackRunnerEnv(run_velocity=0.015, turn_degrees=15, track=track, max_steps=300)
 # env = GymEnvWrapper('CartPole-v0')
 # env= envs.Pong()
 
