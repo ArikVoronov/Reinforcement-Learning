@@ -14,9 +14,9 @@ class HumanController:
         self._key_map = key_map or self.DEFAULT_KEY_MAP
 
     def pick_action(self, state):
-        # Return 0 by default
+        # Return None by default
         # Must run pygame.event.get() previously to execute:
-        action = 0
+        action = None
         for key_name, action_value in self._key_map.items():
             if pygame.key.get_pressed()[getattr(pygame, key_name)]:
                 action = action_value

@@ -29,6 +29,7 @@ class TrackRunnerEnv(EnvBase):
         self._verbose = verbose
         self.player = None
 
+        self.steps = 0
         self.reset()
 
     def reset(self):
@@ -242,7 +243,7 @@ def dist_to_line(point, m, n):
 
 def run_example():
     track = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\src\Envs\Tracks\tracky.pkl'
-    run_velocity = 0.01
+    run_velocity = 0.015
     turn_degrees = 15
     human_player = HumanController()
     agent = human_player.pick_action
