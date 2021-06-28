@@ -22,20 +22,25 @@ class CellClass:
 
 
 class GridWorldEnv(EnvBase):
-    def __init__(self, rows, cols, randomize_goal=False, draw_q_on_render=False):
+    NUMBER_OF_ACTIONS = 4
+
+    def __init__(self, rows, cols, max_steps, randomize_goal=False, draw_q_on_render=False):
         super(GridWorldEnv, self).__init__()
+        self.draw_q_on_render = draw_q_on_render
         self.randomize_goal = randomize_goal
-        self.player_cell = None
-        self.goal_cell = None
+        self.max_steps = max_steps
         self.rows = rows
         self.cols = cols
-        self.nS = rows * cols
-        self.nA = 4
+        self.make_wall = False
+
+        self.state_vector_dimension = 2  # rows * cols
+        self.number_of_actions = self.NUMBER_OF_ACTIONS
 
         self.Q = None
-        self.draw_q_on_render = draw_q_on_render
         self.cell_list = []
         self.steps = 0
+        self.player_cell = None
+        self.goal_cell = None
         self.create_cells()
         self.state = self.reset()
 
@@ -46,8 +51,9 @@ class GridWorldEnv(EnvBase):
             for j in range(self.cols):
                 cell_state = one_hot(i * self.cols + j, self.cols * self.rows).reshape([-1, 1])
                 current_cell = CellClass(i, j, cell_state)
-                if (i == 2) and (j > 0) and (j < self.cols - 1):
-                    current_cell.wall = True
+                if self.make_wall:
+                    if (i == 2) and (j > 0) and (j < self.cols - 1):
+                        current_cell.wall = True
                 self.cell_list[i].append(current_cell)
 
     def reset(self):
@@ -74,6 +80,7 @@ class GridWorldEnv(EnvBase):
         self.goal_cell.goalHere = True
         self.state = self.player_cell.state
         self.steps = 0
+        self.get_state()
         return self.state
 
     def step(self, action):
@@ -82,8 +89,7 @@ class GridWorldEnv(EnvBase):
             reward = 0
             self.state = self.player_cell.state
             return self.state, reward, done
-        if action is not None:
-            pass
+
         self.steps += 1
         player_loc = list(self.player_cell.loc)
         # a - 0:up ; 1:right ; 2:down ; 3:left
@@ -104,11 +110,13 @@ class GridWorldEnv(EnvBase):
             self.player_cell = next_cell
             self.player_cell.player_here = True
         self.state = self.player_cell.state
+        self.get_state()
+
         done = False
-        reward = -1
+        reward = -0.01
         if self.player_cell.goalHere:
             done = True
-        if self.steps >= 10000:
+        if self.steps >= self.max_steps:
             done = True
         return self.state, reward, done
 
@@ -128,6 +136,13 @@ class GridWorldEnv(EnvBase):
                     print_string += 'o'
         print(print_string)
         print('')
+
+    def get_state(self):
+        self.state = (np.array(self.goal_cell.loc) - np.array(self.player_cell.loc))
+        norm = np.array([self.cols, self.rows])
+        self.state = self.state / norm
+        self.state = self.state.reshape(-1, 1)
+        return self.state
 
     def render(self, game_display):
         if self.coordinate_transformer is None:
@@ -179,7 +194,7 @@ class GridWorldEnv(EnvBase):
 
 
 def run_example():
-    env = GridWorldEnv(7, 8, randomize_goal=False)
+    env = GridWorldEnv(7, 8, max_steps=5000, randomize_goal=False)
     # a - 0:up ; 1:right ; 2:down ; 3:left
 
     key_map = {'K_UP': 0, 'K_DOWN': 2, 'K_LEFT': 3, 'K_RIGHT': 1}

@@ -5,11 +5,12 @@ from src.core.config import Config
 
 def main(path_to_config):
     config = Config.load_from_yaml(path_to_config)
-    config.number_of_actions = env.number_of_actions
+    train_rl_config = config.train_rl
+    train_rl_config.number_of_actions = env.number_of_actions
 
     # RL Optimization
     algorithm_list = [
-        QL.CLF(apx=model, **config.to_dict())
+        QL.CLF(apx=model, **train_rl_config.to_dict())
     ]
 
     # Training
@@ -20,5 +21,5 @@ def main(path_to_config):
 
 
 if __name__ == '__main__':
-    path = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\configs\train_rl_config.yaml'
-    main(path)
+    config_path = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\configs\config.yaml'
+    main(config_path)

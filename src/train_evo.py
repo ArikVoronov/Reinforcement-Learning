@@ -7,11 +7,12 @@ from src.core.config import Config
 
 def main(path_to_config):
     config = Config.load_from_yaml(path_to_config)
+    train_evo_config = config.train_evo
     fitness = EvoFitnessRL(env, model)
-    gao = GeneticOptimizer(**config.to_dict())
+    gao = GeneticOptimizer(**train_evo_config.to_dict())
     gao.optimize(model.get_parameters(), fitness)
 
 
 if __name__ == '__main__':
-    path = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\configs\train_evo_config.yaml'
-    main(path)
+    config_path = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\configs\config.yaml'
+    main(config_path)

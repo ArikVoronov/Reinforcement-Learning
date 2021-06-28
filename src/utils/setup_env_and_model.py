@@ -1,9 +1,9 @@
-from src.envs import track_runner
+from src.envs import track_runner, pong, grid_world
 import numpy as np
 
 from src.neural_model.activation_functions import ReLu2, LinearActivation
 from src.neural_model.layer_classes import FullyConnectedLayer
-from src.neural_model.losses import MSELoss,SmoothL1Loss
+from src.neural_model.losses import MSELoss, SmoothL1Loss
 from src.neural_model.models import Model
 from src.utils.rl_utils import nullify_qs
 import gym
@@ -14,7 +14,7 @@ def setup_fc_model(input_size, output_size, hidden_layers_dims=[50], save_file=N
 
     loss = SmoothL1Loss(beta=0.5)
     # loss = MSELoss()
-    activation_list = [ReLu2] * len(hidden_layers_dims) + [ReLu2]
+    activation_list = [ReLu2] * len(hidden_layers_dims) + [LinearActivation]
     layers_list = [FullyConnectedLayer((input_size, layer_sizes[0])), activation_list[0]()]
     for layer_number in range(1, len(layer_sizes)):
         current_layer_size = (layer_sizes[layer_number - 1], layer_sizes[layer_number])
@@ -45,11 +45,13 @@ class GymEnvWrapper:
         return state
 
 
-np.random.seed(430)
+np.random.seed(40)
 
 # Build Env
-track = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\src\Envs\Tracks\tracky.pkl'
-env = track_runner.TrackRunnerEnv(run_velocity=0.015, turn_degrees=15, track=track, max_steps=300)
+# track = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\src\Envs\Tracks\tracky.pkl'
+# env = track_runner.TrackRunnerEnv(run_velocity=0.015, turn_degrees=15, track=track, max_steps=300)
+
+env = grid_world.GridWorldEnv(7, 8, max_steps=500, randomize_goal=False)
 # env = GymEnvWrapper('CartPole-v0')
 # env= envs.Pong()
 

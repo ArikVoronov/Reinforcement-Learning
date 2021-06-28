@@ -1,0 +1,17 @@
+train_evo:
+  specimen_count: 200
+  survivor_count: 20
+  max_iterations: 20
+  mutation_rate: 0.01
+  generation_method: "Random Splice"
+  fitness_target: 0.15
+  output_dir: 'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\evo_agents'
+
+train_rl:
+  model_learning_rate: 0.001
+  reward_discount: 0.95
+  epsilon: 0.9
+  epsilon_decay: 0.95
+  max_episodes: 5000
+  printout_episodes: 50
+  output_dir_path: 'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\rl_agents'
