@@ -8,6 +8,7 @@ train_evo:
   output_dir: 'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\evo_agents'
 
 train_rl:
+  
   model_learning_rate: 0.001
   reward_discount: 0.95
   epsilon: 0.9

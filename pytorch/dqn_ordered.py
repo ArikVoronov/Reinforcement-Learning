@@ -15,6 +15,8 @@ import torch.nn.functional as F
 import torchvision.transforms as T
 from tqdm import tqdm
 
+from src.utils.setup_env_and_model import *
+
 torch.manual_seed(42)
 np.random.seed(42)
 
@@ -40,10 +42,27 @@ class ReplayMemory(object):
         return len(self.memory)
 
 
-class Model(nn.Module):
+class FCModel(nn.Module):
+
+    def __init__(self, input_size, output_size, hidden_size):
+        super(FCModel, self).__init__()
+        self.fc1 = nn.Linear(input_size, hidden_size)
+        # self.bn1 = nn.BatchNorm1d(hidden_size)
+        self.head = nn.Linear(hidden_size, output_size)
+
+    # Called with either one element to determine next action, or a batch
+    # during optimization. Returns tensor([[left0exp,right0exp]...]).
+    def forward(self, x):
+        x = torch.tensor(x).float()
+        x = x.to(device)
+        x = F.relu(self.fc1(x))
+        return self.head(x.view(x.size(0), -1))
+
+
+class ConvModel(nn.Module):
 
     def __init__(self, h, w, outputs):
-        super(Model, self).__init__()
+        super(ConvModel, self).__init__()
         self.conv1 = nn.Conv2d(3, 16, kernel_size=5, stride=2)
         self.bn1 = nn.BatchNorm2d(16)
         self.conv2 = nn.Conv2d(16, 32, kernel_size=5, stride=2)
@@ -72,13 +91,17 @@ class Model(nn.Module):
 
 
 class CartEnv:
-    def __init__(self):
+    def __init__(self, state_as_image_difference=True):
+        self._state_as_image_difference = state_as_image_difference
         self._env = gym.make('CartPole-v0').unwrapped
         self.state_vector_dimension = self._env.observation_space.shape[0]
         self.number_of_actions = self._env.action_space.n
         self._resize = T.Compose([T.ToPILImage(),
                                   T.Resize(40, interpolation=Image.CUBIC),
                                   T.ToTensor()])
+        self.state = None
+        self._env_state = None
+        self.last_screen = None
         self.reset()
         init_screen = self.get_screen()
         _, _, screen_height, screen_width = init_screen.shape
@@ -86,19 +109,30 @@ class CartEnv:
         self.screen_width = screen_width
 
     def step(self, *args):
-        _, reward, done, _ = self._env.step(*args)
-        state = self.get_screen()
+        self._env_state, reward, done, _ = self._env.step(*args)
+        state = self.get_state()
         return state, reward, done
 
     def reset(self):
-        _ = self._env.reset()
-        state = self.get_screen()
+        self._env_state = self._env.reset()
+        if self._state_as_image_difference:
+            self.state = self.get_screen()
+        state = self.get_state()
         return state
 
     def _get_cart_location(self, screen_width):
         world_width = self._env.x_threshold * 2
         scale = screen_width / world_width
         return int(self._env.state[0] * scale + screen_width / 2.0)  # MIDDLE OF CART
+
+    def get_state(self):
+        if self._state_as_image_difference:
+            self.last_screen = self.state
+            new_screen = self.get_screen()
+            state = new_screen - self.last_screen
+        else:
+            state = self._env_state
+        return state
 
     def get_screen(self):
         # Returned screen requested by gym is 400x600x3, but is sometimes larger
@@ -127,10 +161,10 @@ class CartEnv:
 
 
 class DQN:
-    def __init__(self, policy_net, target_net, env):
+    def __init__(self, policy_net, target_net, env,model_lr):
         self.policy_net = policy_net
         self.target_net = target_net
-        self.optimizer = optim.RMSprop(policy_net.parameters())
+        self.optimizer = optim.RMSprop(policy_net.parameters(),lr=model_lr)
         self.memory = ReplayMemory(10000)
         self._env = env
 
@@ -142,9 +176,8 @@ class DQN:
         for i_episode in pbar:
             episode_reward = 0
             # Initialize the environment and state
-            last_screen = self._env.reset()
-            current_screen = self._env.reset()
-            state = current_screen - last_screen
+            state = self._env.reset()
+            state = torch.tensor(state.T)
             for t in count():
                 # Select and perform an action
                 self.eps_threshold = EPS_END + (EPS_START - EPS_END) * \
@@ -156,10 +189,8 @@ class DQN:
                 episode_reward += reward.cpu()[0].numpy()
 
                 # Observe new state
-                last_screen = current_screen
-                current_screen = screen_state
                 if not done:
-                    next_state = current_screen - last_screen
+                    next_state = torch.tensor(screen_state.T)
                 else:
                     next_state = None
 
@@ -177,7 +208,7 @@ class DQN:
                     # plot_durations()
                     break
             # Update the target network, copying all weights and biases in DQN
-            pbar.desc = f"epoch {i_episode}, total reward {np.mean(total_reward):.3f}, eps {self.eps_threshold:.3f}"
+            pbar.desc = f"epoch {i_episode}, total reward {np.mean(total_reward[-10:]):.3f}, eps {self.eps_threshold:.3f}"
             if i_episode % TARGET_UPDATE == 0:
                 self.target_net.load_state_dict(self.policy_net.state_dict())
 
@@ -227,9 +258,7 @@ class DQN:
         self.optimizer.step()
 
     def select_action(self, state):
-
         sample = random.random()
-
         if sample > self.eps_threshold:
             with torch.no_grad():
                 # t.max(1) will return largest column value of each row.
@@ -240,22 +269,25 @@ class DQN:
             return torch.tensor([[random.randrange(self._env.number_of_actions)]], device=device, dtype=torch.long)
 
 
-BATCH_SIZE = 128
+BATCH_SIZE = 16
 GAMMA = 0.999
 EPS_START = 0.9
 EPS_END = 0.05
-EPS_DECAY = 200
+EPS_DECAY = 10000
 TARGET_UPDATE = 10
-NUM_EPISODES = 200
+NUM_EPISODES = 2000
+MODEL_LR = 0.001
 
 
 def main():
-    env = CartEnv()
-    policy_net = Model(env.screen_height, env.screen_width, env.number_of_actions).to(device)
-    target_net = Model(env.screen_height, env.screen_width, env.number_of_actions).to(device)
+    # env = CartEnv()
+    # policy_net = ConvModel(env.screen_height, env.screen_width, env.number_of_actions).to(device)
+    # target_net = ConvModel(env.screen_height, env.screen_width, env.number_of_actions).to(device)
+    policy_net = FCModel(env.state_vector_dimension, env.number_of_actions, hidden_size=200).to(device)
+    target_net = FCModel(env.state_vector_dimension, env.number_of_actions, hidden_size=200).to(device)
     target_net.load_state_dict(policy_net.state_dict())
     target_net.eval()
-    dqn = DQN(policy_net, target_net, env)
+    dqn = DQN(policy_net, target_net, env,model_lr=MODEL_LR)
     dqn.train(num_episodes=NUM_EPISODES)
 
 
