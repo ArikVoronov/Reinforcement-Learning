@@ -1,4 +1,19 @@
-run_mode: 'run_env'
+run_mode: 'train_evo' #train_evo / train_rl / run_env
+
+general:
+  seed: 42
+
+env:
+  name: 'TrackRunnerEnv'
+  parameters:
+    run_velocity: 0.015
+    turn_degrees: 15
+    track: 'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\src\Envs\Tracks\tracky.pkl'
+    max_steps: 300
+
+model:
+  hidden_layers_dims: [ 50 ]
+  save_file: ~
 
 train_evo:
   specimen_count: 200
@@ -10,7 +25,6 @@ train_evo:
   output_dir: 'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\evo_agents'
 
 train_rl:
-
   model_learning_rate: 0.001
   reward_discount: 0.95
   epsilon: 0.9

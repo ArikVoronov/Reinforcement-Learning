@@ -2,13 +2,34 @@ from src.evo.evo_utils import EvoFitnessRL
 from src.evo.genetic_algorithm import GeneticOptimizer
 from src.core.config import Config
 from src.rl_algorithms import QL
-from src.utils.setup_env_and_model import env, model
 from src.envs.env_utils import run_env_with_display
 from src.utils.rl_utils import NeuralNetworkAgent
+
+import src.envs as envs
+import numpy as np
+
+from src.utils.general_utils import setup_fc_model
+from src.utils.rl_utils import nullify_qs
 
 
 def main(path_to_config):
     config = Config.load_from_yaml(path_to_config)
+
+    np.random.seed(config.general.seed)
+
+    # Build env
+    env_config = config.env
+    env_class = getattr(envs, env_config.name)
+    env = env_class(**env_config.parameters.to_dict())
+
+    # Create model
+    model_config = config.model
+    model = setup_fc_model(input_size=env.state_vector_dimension, output_size=env.number_of_actions,
+                           **model_config.to_dict())
+    if model_config.save_file is None:
+        nullify_qs(model, env)
+
+    # Run
     run_mode = config.run_mode
     if run_mode == 'train_evo':
         train_evo_config = config.train_evo
