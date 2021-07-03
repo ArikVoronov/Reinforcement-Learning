@@ -45,13 +45,13 @@ class GymEnvWrapper:
         return state
 
 
-np.random.seed(40)
+np.random.seed(45)
 
 # Build Env
 # track = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\src\Envs\Tracks\tracky.pkl'
 # env = track_runner.TrackRunnerEnv(run_velocity=0.015, turn_degrees=15, track=track, max_steps=300)
 
-env = grid_world.GridWorldEnv(4, 4, max_steps=100, randomize_goal=False)
+env = grid_world.GridWorldEnv(10, 10, max_steps=100, randomize_goal=False)
 # env = GymEnvWrapper('CartPole-v0')
 # env= envs.Pong()
 

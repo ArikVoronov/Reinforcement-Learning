@@ -91,7 +91,7 @@ class ConvModel(nn.Module):
 
 
 class CartEnv:
-    def __init__(self, state_as_image_difference=True):
+    def __init__(self, state_as_image_difference=False):
         self._state_as_image_difference = state_as_image_difference
         self._env = gym.make('CartPole-v0').unwrapped
         self.state_vector_dimension = self._env.observation_space.shape[0]
@@ -155,16 +155,15 @@ class CartEnv:
         # Convert to float, rescale, convert to torch tensor
         # (this doesn't require a copy)
         screen = np.ascontiguousarray(screen, dtype=np.float32) / 255
-        screen = torch.from_numpy(screen)
         # Resize, and add a batch dimension (BCHW)
         return self._resize(screen).unsqueeze(0)
 
 
 class DQN:
-    def __init__(self, policy_net, target_net, env,model_lr):
+    def __init__(self, policy_net, target_net, env, model_lr):
         self.policy_net = policy_net
         self.target_net = target_net
-        self.optimizer = optim.RMSprop(policy_net.parameters(),lr=model_lr)
+        self.optimizer = optim.RMSprop(policy_net.parameters(), lr=model_lr)
         self.memory = ReplayMemory(10000)
         self._env = env
 
@@ -177,7 +176,7 @@ class DQN:
             episode_reward = 0
             # Initialize the environment and state
             state = self._env.reset()
-            state = torch.tensor(state.T)
+            state = torch.tensor(state[None, :])
             for t in count():
                 # Select and perform an action
                 self.eps_threshold = EPS_END + (EPS_START - EPS_END) * \
@@ -190,7 +189,7 @@ class DQN:
 
                 # Observe new state
                 if not done:
-                    next_state = torch.tensor(screen_state.T)
+                    next_state = torch.tensor(screen_state[None, :])
                 else:
                     next_state = None
 
@@ -280,14 +279,15 @@ MODEL_LR = 0.001
 
 
 def main():
-    # env = CartEnv()
+
+    env = CartEnv(state_as_image_difference=False)
     # policy_net = ConvModel(env.screen_height, env.screen_width, env.number_of_actions).to(device)
     # target_net = ConvModel(env.screen_height, env.screen_width, env.number_of_actions).to(device)
     policy_net = FCModel(env.state_vector_dimension, env.number_of_actions, hidden_size=200).to(device)
     target_net = FCModel(env.state_vector_dimension, env.number_of_actions, hidden_size=200).to(device)
     target_net.load_state_dict(policy_net.state_dict())
     target_net.eval()
-    dqn = DQN(policy_net, target_net, env,model_lr=MODEL_LR)
+    dqn = DQN(policy_net, target_net, env, model_lr=MODEL_LR)
     dqn.train(num_episodes=NUM_EPISODES)
 
 

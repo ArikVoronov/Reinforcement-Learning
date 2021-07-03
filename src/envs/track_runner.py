@@ -63,7 +63,7 @@ class TrackRunnerEnv(EnvBase):
         return reward
 
     def get_state(self):
-        self.state = np.zeros([self.state_vector_dimension, 1])
+        self.state = np.zeros([self.state_vector_dimension])
         for i, sensor_readings in enumerate(self.player.sensor_readings_dict.values()):
             self.state[i] = sensor_readings['distance']
         return self.state

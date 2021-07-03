@@ -87,7 +87,7 @@ class GridWorldEnv(EnvBase):
         if action is None:
             done = False
             reward = 0
-            self.state = self.player_cell.state
+            self.get_state()
             return self.state, reward, done
 
         self.steps += 1
@@ -109,7 +109,6 @@ class GridWorldEnv(EnvBase):
             self.player_cell.player_here = False
             self.player_cell = next_cell
             self.player_cell.player_here = True
-        self.state = self.player_cell.state
         self.get_state()
 
         done = False
@@ -141,7 +140,6 @@ class GridWorldEnv(EnvBase):
         self.state = (np.array(self.goal_cell.loc) - np.array(self.player_cell.loc))
         norm = np.array([self.cols, self.rows])
         self.state = self.state / norm
-        self.state = self.state.reshape(-1, 1)
         return self.state
 
     def render(self, game_display):

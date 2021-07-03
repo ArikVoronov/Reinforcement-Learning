@@ -44,7 +44,7 @@ class PongEnv(EnvBase):
         self.ball.reset()
         for pad in self.paddles:
             pad.position[1] = 0.5
-        self.state = self.state_update()
+        self.state = self.get_state()
 
     def step(self, player_action=0):
         self.deltaScore = np.array([0, 0])
@@ -65,7 +65,7 @@ class PongEnv(EnvBase):
             if self.games >= self.games_per_match:
                 self.steps = 0
                 self.done = True
-        self.state = self.state_update()
+        self.state = self.get_state()
         self.reward = self.get_reward()
         return self.state, self.reward, self.done
 
@@ -79,7 +79,7 @@ class PongEnv(EnvBase):
             reward = -10
         return reward
 
-    def state_update(self):
+    def get_state(self):
         # state [left pad position, right pad position, ball location, ball velocity, ball velocity ratio]
         state = []
         for pad in self.paddles:
@@ -88,7 +88,6 @@ class PongEnv(EnvBase):
         state += list(self.ball.vel)
         state += [self.ball.vel[1] / self.ball.vel[0]]
         state = np.array(state)
-        state = state[:, None]
         return state
 
     def score_update(self):

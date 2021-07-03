@@ -102,6 +102,7 @@ class NeuralNetworkAgent:
         self.q_approximator.load_parameters_from_file(weights_file_path)
 
     def pick_action(self, state):
+        state = state.reshape(-1,1)
         q = self.q_approximator(state).squeeze()
         best_action = np.argwhere(q == np.amax(q))
         return best_action[0][0]

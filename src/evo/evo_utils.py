@@ -6,8 +6,9 @@ class EvoAgent:
         self.model = model
 
     def pick_action(self, state):
+        state = state.reshape(-1,1)
         a = self.model(state)
-        action = np.argmax(a)
+        action = np.argmax(a,axis=0)
         return action
 
 
