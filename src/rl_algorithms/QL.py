@@ -11,13 +11,12 @@ from src.envs.env_utils import run_env
 
 
 class CLF:
-    def __init__(self, apx, number_of_actions, model_learning_rate,
+    def __init__(self, apx, model_learning_rate,
                  reward_discount=0.9, epsilon=0.1, epsilon_decay=1,
                  max_episodes=1000, printout_episodes=None, featurize=None, output_dir_path=None):
         self.q_approximator = copy.deepcopy(apx)
 
         self.optimizer = SGD(layers=self.q_approximator.layers_list, learning_rate=model_learning_rate)
-        self.number_of_actions = number_of_actions
         self.reward_discount = reward_discount
         self.epsilon_0 = epsilon
         self.epsilon_decay = epsilon_decay
@@ -51,6 +50,7 @@ class CLF:
         best_reward = None
         for episode in pbar:
             state = env.reset()
+            state= state.reshape(-1,1)
             # state = self.featurize(state).reshape([-1, 1])
             episode_steps = 0
             episode_reward = 0
@@ -62,12 +62,11 @@ class CLF:
                     'state': list(),
                     'next_state': list(),
                     'reward': list()
-
                 }
-
                 for batch_n in range(batch_size):
                     action = self.pick_action(state)
                     next_state, reward, done = env.step(action)
+                    next_state = next_state.reshape(-1,1)
                     for k, v in optimization_arrays_dict.items():
                         optimization_arrays_dict[k].append(locals()[k])
                     state = next_state
@@ -138,18 +137,22 @@ class CLF:
         self.optimizer.step()
 
     def epsilon_policy(self, state):
+
         q = self.q_approximator(state)
+        number_of_actions = q.shape[0]
         if np.isnan(q).any():
             raise ValueError('q approximation is NaN')
         q = q.squeeze()
         best_action = np.argwhere(q == np.amax(q))  # This gives ALL indices where Q == max(Q)
-        action_probabilities = np.ones(self.number_of_actions) * self.epsilon / self.number_of_actions
+        action_probabilities = np.ones(number_of_actions) * self.epsilon / number_of_actions
         action_probabilities[best_action] += (1 - self.epsilon) / len(best_action)
         return action_probabilities
 
     def pick_action(self, state):
+        state = state.reshape(-1, 1)
         action_probability = self.epsilon_policy(state)
-        action = np.random.choice(self.number_of_actions, p=action_probability)
+        number_of_actions = action_probability.shape[0]
+        action = np.random.choice(number_of_actions, p=action_probability)
         return action
 
     # def pick_action(self, state):

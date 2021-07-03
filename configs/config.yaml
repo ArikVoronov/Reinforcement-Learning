@@ -1,4 +1,4 @@
-run_mode: 'train_evo' #train_evo / train_rl / run_env
+run_mode: 'train_rl' #train_evo / train_rl / run_env
 
 general:
   seed: 42

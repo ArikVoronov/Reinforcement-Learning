@@ -39,7 +39,7 @@ def main(path_to_config):
 
     elif run_mode == 'train_rl':
         train_rl_config = config.train_rl
-        train_rl_config.number_of_actions = env.number_of_actions
+        # train_rl_config.number_of_actions = env.number_of_actions
         algorithm_list = [
             QL.CLF(apx=model, **train_rl_config.to_dict())
         ]
