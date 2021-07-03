@@ -58,8 +58,8 @@ class TrackRunnerEnv(EnvBase):
     def get_reward(self):
         factor = self.player.speed / self.player.initial_speed  # factor=1 for constant speed
         reward = 1 / self.max_steps
-        # if self.player.collide:
-        #     reward += -1
+        if self.player.collide:
+            reward += -1
         return reward
 
     def get_state(self):

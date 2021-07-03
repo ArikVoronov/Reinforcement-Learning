@@ -1,3 +1,5 @@
+run_mode: 'run_env'
+
 train_evo:
   specimen_count: 200
   survivor_count: 20
@@ -8,7 +10,7 @@ train_evo:
   output_dir: 'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\evo_agents'
 
 train_rl:
-  
+
   model_learning_rate: 0.001
   reward_discount: 0.95
   epsilon: 0.9
@@ -16,3 +18,6 @@ train_rl:
   max_episodes: 5000
   printout_episodes: 50
   output_dir_path: 'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\rl_agents'
+
+run_env:
+  agent_weights_file_path: 'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\evo_agents\TrackRunnerEnv_2021_07_03-21_41\agent_parameters_7_fitness_-1_00.pkl'
