@@ -11,17 +11,19 @@ from src.envs.env_utils import run_env
 
 
 class CLF:
-    def __init__(self, apx, model_learning_rate,
-                 reward_discount=0.9, epsilon=0.1, epsilon_decay=1,
-                 max_episodes=1000, printout_episodes=None, featurize=None, output_dir_path=None):
+    def __init__(self, apx,env,max_episodes, batch_size,model_learning_rate,
+                 reward_discount, epsilon, epsilon_decay,
+                 printout_episodes=None, featurize=None, output_dir_path=None):
+        self.env=env
         self.q_approximator = copy.deepcopy(apx)
+        self.max_episodes = max_episodes
+        self.batch_size = batch_size
 
         self.optimizer = SGD(layers=self.q_approximator.layers_list, learning_rate=model_learning_rate)
         self.reward_discount = reward_discount
         self.epsilon_0 = epsilon
         self.epsilon_decay = epsilon_decay
-        self.max_episodes = max_episodes
-        self.batch_size = None
+
         self.episode_steps_list = []
         self.episode_reward_list = []
         self.printout_episodes = printout_episodes
@@ -35,12 +37,11 @@ class CLF:
     def load_weights(self, weights_file_path):
         self.q_approximator.load_parameters_from_file(weights_file_path)
 
-    def train(self, env, batch_size, check_grad=False):
-        self.batch_size = batch_size
+    def train(self, check_grad=False):
         if self._output_dir is not None:
             FORMAT = "%Y_%m_%d-%H_%M"
             ts = datetime.datetime.now().strftime(FORMAT)
-            env_name = env.__class__.__name__
+            env_name = self.env.__class__.__name__
             run_name = env_name + '_' + ts
             self._output_dir = os.path.join(self._output_dir, run_name)
             os.makedirs(self._output_dir, exist_ok=True)
@@ -49,8 +50,8 @@ class CLF:
         best_parameters = None
         best_reward = None
         for episode in pbar:
-            state = env.reset()
-            state= state.reshape(-1,1)
+            state = self.env.reset()
+            state = state.reshape(-1, 1)
             # state = self.featurize(state).reshape([-1, 1])
             episode_steps = 0
             episode_reward = 0
@@ -63,10 +64,10 @@ class CLF:
                     'next_state': list(),
                     'reward': list()
                 }
-                for batch_n in range(batch_size):
+                for batch_n in range(self.batch_size):
                     action = self.pick_action(state)
-                    next_state, reward, done = env.step(action)
-                    next_state = next_state.reshape(-1,1)
+                    next_state, reward, done = self.env.step(action)
+                    next_state = next_state.reshape(-1, 1)
                     for k, v in optimization_arrays_dict.items():
                         optimization_arrays_dict[k].append(locals()[k])
                     state = next_state
@@ -81,7 +82,7 @@ class CLF:
                             best_parameters = copy.deepcopy(self.q_approximator.get_parameters())
                             best_reward = episode_reward
                             agent = NeuralNetworkAgent(apx=self.q_approximator)
-                            reward_total = run_env(env=env, agent=agent.pick_action)
+                            reward_total = run_env(env=self.env, agent=agent.pick_action)
                             # print(f'best reward {best_reward} actual total_reward {reward_total}')
                     self.episode_steps_list.append(episode_steps)
                     self.episode_reward_list.append(episode_reward)
@@ -137,7 +138,6 @@ class CLF:
         self.optimizer.step()
 
     def epsilon_policy(self, state):
-
         q = self.q_approximator(state)
         number_of_actions = q.shape[0]
         if np.isnan(q).any():

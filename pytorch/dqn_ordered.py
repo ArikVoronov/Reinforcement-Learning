@@ -15,7 +15,14 @@ import torch.nn.functional as F
 import torchvision.transforms as T
 from tqdm import tqdm
 
-from src.utils.setup_env_and_model import *
+BATCH_SIZE = 16
+GAMMA = 0.999
+EPS_START = 0.9
+EPS_END = 0.05
+EPS_DECAY = 10000
+TARGET_UPDATE = 10
+NUM_EPISODES = 2000
+MODEL_LR = 0.001
 
 torch.manual_seed(42)
 np.random.seed(42)
@@ -103,10 +110,13 @@ class CartEnv:
         self._env_state = None
         self.last_screen = None
         self.reset()
-        init_screen = self.get_screen()
-        _, _, screen_height, screen_width = init_screen.shape
-        self.screen_height = screen_height
-        self.screen_width = screen_width
+        self.screen_height = None
+        self.screen_width = None
+        if self._state_as_image_difference:
+            init_screen = self.get_screen()
+            _, screen_height, screen_width = init_screen.shape
+            self.screen_height = screen_height
+            self.screen_width = screen_width
 
     def step(self, *args):
         self._env_state, reward, done, _ = self._env.step(*args)
@@ -120,11 +130,6 @@ class CartEnv:
         state = self.get_state()
         return state
 
-    def _get_cart_location(self, screen_width):
-        world_width = self._env.x_threshold * 2
-        scale = screen_width / world_width
-        return int(self._env.state[0] * scale + screen_width / 2.0)  # MIDDLE OF CART
-
     def get_state(self):
         if self._state_as_image_difference:
             self.last_screen = self.state
@@ -133,6 +138,11 @@ class CartEnv:
         else:
             state = self._env_state
         return state
+
+    def _get_cart_location(self, screen_width):
+        world_width = self._env.x_threshold * 2
+        scale = screen_width / world_width
+        return int(self._env.state[0] * scale + screen_width / 2.0)  # MIDDLE OF CART
 
     def get_screen(self):
         # Returned screen requested by gym is 400x600x3, but is sometimes larger
@@ -155,41 +165,47 @@ class CartEnv:
         # Convert to float, rescale, convert to torch tensor
         # (this doesn't require a copy)
         screen = np.ascontiguousarray(screen, dtype=np.float32) / 255
+        screen = torch.from_numpy(screen)
         # Resize, and add a batch dimension (BCHW)
-        return self._resize(screen).unsqueeze(0)
+        return self._resize(screen).numpy()
 
 
 class DQN:
-    def __init__(self, policy_net, target_net, env, model_lr):
+    def __init__(self, policy_net, target_net, model_lr, env, max_episodes, batch_size):
+        self.env = env
         self.policy_net = policy_net
         self.target_net = target_net
         self.optimizer = optim.RMSprop(policy_net.parameters(), lr=model_lr)
         self.memory = ReplayMemory(10000)
-        self._env = env
+        self.steps_done = 0
+        self.eps_threshold = None
+        self.batch_size = batch_size
+        self.max_episodes = max_episodes
 
-    def train(self, num_episodes):
+    def train(self):
+        self.batch_size = self.batch_size
         total_reward = list()
-        pbar = tqdm(range(num_episodes))
+        pbar = tqdm(range(self.max_episodes))
         episode_durations = list()
         self.steps_done = 0
         for i_episode in pbar:
             episode_reward = 0
             # Initialize the environment and state
-            state = self._env.reset()
-            state = torch.tensor(state[None, :])
+            state = self.env.reset()
+            state = torch.tensor(state).unsqueeze(0)
             for t in count():
                 # Select and perform an action
                 self.eps_threshold = EPS_END + (EPS_START - EPS_END) * \
                                      math.exp(-1. * self.steps_done / EPS_DECAY)
                 self.steps_done += 1
                 action = self.select_action(state)
-                screen_state, reward, done = self._env.step(action.item())
+                env_state, reward, done = self.env.step(action.item())
                 reward = torch.tensor([reward], device=device)
                 episode_reward += reward.cpu()[0].numpy()
 
                 # Observe new state
                 if not done:
-                    next_state = torch.tensor(screen_state[None, :])
+                    next_state = torch.tensor(env_state).unsqueeze(0)
                 else:
                     next_state = None
 
@@ -212,9 +228,9 @@ class DQN:
                 self.target_net.load_state_dict(self.policy_net.state_dict())
 
     def optimize_model(self):
-        if len(self.memory) < BATCH_SIZE:
+        if len(self.memory) < self.batch_size:
             return
-        transitions = self.memory.sample(BATCH_SIZE)
+        transitions = self.memory.sample(self.batch_size)
         # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for
         # detailed explanation). This converts batch-array of Transitions
         # to Transition of batch-arrays.
@@ -240,7 +256,7 @@ class DQN:
         # on the "older" target_net; selecting their best reward with max(1)[0].
         # This is merged based on the mask, such that we'll have either the expected
         # state value or 0 in case the state was final.
-        next_state_values = torch.zeros(BATCH_SIZE, device=device)
+        next_state_values = torch.zeros(self.batch_size, device=device)
         next_state_values[non_final_mask] = self.target_net(non_final_next_states).max(1)[0].detach()
         # Compute the expected Q values
         expected_state_action_values = (next_state_values * GAMMA) + reward_batch
@@ -258,37 +274,35 @@ class DQN:
 
     def select_action(self, state):
         sample = random.random()
+        q_estimation = self.policy_net(state)
+        number_of_actions = q_estimation.shape[-1]
         if sample > self.eps_threshold:
             with torch.no_grad():
                 # t.max(1) will return largest column value of each row.
                 # second column on max result is index of where max element was
                 # found, so we pick action with the larger expected reward.
-                return self.policy_net(state).max(1)[1].view(1, 1)
+                best_action = q_estimation.max(1)[1].view(1, 1)
+                return best_action
         else:
-            return torch.tensor([[random.randrange(self._env.number_of_actions)]], device=device, dtype=torch.long)
-
-
-BATCH_SIZE = 16
-GAMMA = 0.999
-EPS_START = 0.9
-EPS_END = 0.05
-EPS_DECAY = 10000
-TARGET_UPDATE = 10
-NUM_EPISODES = 2000
-MODEL_LR = 0.001
+            return torch.tensor([[random.randrange(number_of_actions)]], device=device, dtype=torch.long)
 
 
 def main():
-
-    env = CartEnv(state_as_image_difference=False)
-    # policy_net = ConvModel(env.screen_height, env.screen_width, env.number_of_actions).to(device)
-    # target_net = ConvModel(env.screen_height, env.screen_width, env.number_of_actions).to(device)
-    policy_net = FCModel(env.state_vector_dimension, env.number_of_actions, hidden_size=200).to(device)
-    target_net = FCModel(env.state_vector_dimension, env.number_of_actions, hidden_size=200).to(device)
+    mode = 'fc'
+    if mode == 'conv':
+        env = CartEnv(state_as_image_difference=True)
+        policy_net = ConvModel(env.screen_height, env.screen_width, env.number_of_actions).to(device)
+        target_net = ConvModel(env.screen_height, env.screen_width, env.number_of_actions).to(device)
+    elif mode == 'fc':
+        env = CartEnv(state_as_image_difference=False)
+        policy_net = FCModel(env.state_vector_dimension, env.number_of_actions, hidden_size=200).to(device)
+        target_net = FCModel(env.state_vector_dimension, env.number_of_actions, hidden_size=200).to(device)
+    else:
+        raise Exception()
     target_net.load_state_dict(policy_net.state_dict())
     target_net.eval()
-    dqn = DQN(policy_net, target_net, env, model_lr=MODEL_LR)
-    dqn.train(num_episodes=NUM_EPISODES)
+    dqn = DQN( policy_net, target_net, env=env,model_lr=MODEL_LR, max_episodes=NUM_EPISODES, batch_size=BATCH_SIZE)
+    dqn.train()
 
 
 if __name__ == '__main__':

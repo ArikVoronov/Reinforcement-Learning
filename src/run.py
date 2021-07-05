@@ -41,12 +41,12 @@ def main(path_to_config):
         train_rl_config = config.train_rl
         # train_rl_config.number_of_actions = env.number_of_actions
         algorithm_list = [
-            QL.CLF(apx=model, **train_rl_config.to_dict())
+            QL.CLF(apx=model, env=env, **train_rl_config.to_dict())
         ]
         print('\nTraining RL algorithms')
         for i in range(len(algorithm_list)):
             print('\nTraining algorithms #', i + 1)
-            algorithm_list[i].train(env, batch_size=4, check_grad=False)
+            algorithm_list[i].train(check_grad=False)
 
     elif run_mode == 'run_env':
         run_env_config = config.run_env
