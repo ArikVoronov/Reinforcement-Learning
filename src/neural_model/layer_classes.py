@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 import numpy as np
+from core import *
 
 
 class Context:
@@ -55,48 +56,44 @@ class InputLayer(LayerBase):
 
 
 class FullyConnectedLayer(LayerBase):
-    def __init__(self, layer_sizes):
+    def __init__(self, input_size, output_size):
         super(FullyConnectedLayer, self).__init__()
         self.grad_required = True
         # layer_sizes is a list, ls[1] is self length, ls[0] is previous layer
-        if type(layer_sizes[0]) == list:
-            layer_sizes[0] = np.prod(layer_sizes[0])
-        self.layer_sizes = layer_sizes
+        self._input_size = input_size
+        self._output_size = output_size
+        self.w = None
+        self.b = None
         self.dw = None
         self.db = None
         self._initialize_weights()
 
     def _initialize_weights(self):
-        signs = (2 * np.random.randint(0, 2, size=self.layer_sizes[1] * self.layer_sizes[0]) - 1).reshape(
-            self.layer_sizes[1], self.layer_sizes[0])
-        var = np.sqrt(2 / self.layer_sizes[1])
+        weight_dims = (self._input_size, self._output_size)
+        total_size = self._input_size * self._output_size
+        signs = (2 * np.random.randint(0, 2, size=total_size) - 1).reshape(*weight_dims)
+        var = np.sqrt(2 / self._output_size)
 
         self.w = var * 1 * signs * (
-                np.random.randint(10, 1e2, size=self.layer_sizes[1] * self.layer_sizes[0]) / 1e2).reshape(
-            [self.layer_sizes[1], self.layer_sizes[0]])
+                np.random.randint(10, 1e2, size=total_size) / 1e2).reshape(weight_dims)
 
-        bound = 1 / np.sqrt(self.layer_sizes[1])
-        self.w = bound * 2 * (np.random.rand(self.layer_sizes[1], self.layer_sizes[0]) - 0.5)
+        bound = 1 / np.sqrt(self._output_size)
+        self.w = bound * 2 * (np.random.rand(self._input_size, self._output_size) - 0.5)
 
-        self.b = np.zeros([self.layer_sizes[1], 1])
+        self.b = np.zeros([1, self._output_size])
 
     def forward(self, ctx, layer_input):
-        if len(layer_input.shape) > 2:
-            layer_input = layer_input.reshape(self.layer_sizes[0], -1)
-        layer_output = np.dot(self.w, layer_input) + self.b
+        layer_output = np.dot(layer_input, self.w) + self.b
         ctx.save_for_backward(layer_input)
         return layer_output
 
     def backward(self, ctx: Context, grad_output):
         layer_input = ctx.get_saved_tensors()
-        if len(layer_input.shape) > 2:
-            layer_input = layer_input.reshape(self.layer_sizes[0], -1)
-
-        db = np.sum(grad_output, axis=1).reshape(self.b.shape[0], 1)
-        dw = np.dot(grad_output, layer_input.T)
+        db = np.sum(grad_output, axis=SAMPLES_DIM).reshape(1, self.b.shape[CLASSES_DIM])
+        dw = np.dot(layer_input.T, grad_output)
         self.dw = dw
         self.db = db
-        dz = np.dot(self.w.T, grad_output)
+        dz = np.dot(grad_output, self.w.T)
         return dz
 
     def set_parameters(self, parameters_list):
