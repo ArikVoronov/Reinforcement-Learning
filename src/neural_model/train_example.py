@@ -41,8 +41,11 @@ def main():
     model = make_example_net()
     data_root = r'F:\My_train Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\data'
     mnist_trainset = datasets.MNIST(root=data_root, train=True, download=True, transform=None)
+    mnist_testset = datasets.MNIST(root=data_root, train=False, download=True, transform=None)
     x_train, y_train = mnist_trainset.data, mnist_trainset.train_labels
     x_train, y_train = data_preprocessing(x_train, y_train)
+    x_test, y_test = mnist_testset.data, mnist_testset.train_labels
+    x_test, y_test = data_preprocessing(x_test, y_test)
 
     # Training parameters
     learning_rate = 0.01
@@ -56,7 +59,7 @@ def main():
     batch_size = 8092
     epochs = 50  # Irrelevant to RL
     train_model(x_train, y_train, model=model, epochs=epochs, batch_size=batch_size, optimizer=optimizer,
-                do_grad_check=False)
+                do_grad_check=False, val_data=(x_test, y_test))
 
 
 if __name__ == '__main__':

@@ -70,13 +70,13 @@ class DataLoader:
         return x_batch, y_batch
 
 
-def train_model(x, y, model, epochs, optimizer, batch_size=None, do_grad_check=False):
-    if batch_size is None or batch_size >= x.shape[SAMPLES_DIM]:
-        batch_size = x.shape[SAMPLES_DIM]
+def train_model(x_train, y_train, model, epochs, optimizer, val_data=None, batch_size=None, do_grad_check=False):
+    if batch_size is None or batch_size >= x_train.shape[SAMPLES_DIM]:
+        batch_size = x_train.shape[SAMPLES_DIM]
     # Begin optimization iterations
     loss_list = []  # Loss list
-    data_loader = DataLoader(x, y, batch_size)
-    batches = int(np.floor(x.shape[SAMPLES_DIM] / batch_size)) + 1  # Number of batches per epoch
+    data_loader = DataLoader(x_train, y_train, batch_size)
+    batches = int(np.floor(x_train.shape[SAMPLES_DIM] / batch_size)) + 1  # Number of batches per epoch
     for epoch in range(epochs):
         # optimizer.learning_rate = optimizer.learning_rate*0.99
         pbar = tqdm(range(batches))
@@ -102,13 +102,21 @@ def train_model(x, y, model, epochs, optimizer, batch_size=None, do_grad_check=F
             a_y_true = np.argmax(y_batch, axis=CLASSES_DIM)
             accuracy = np.mean(a_y_true == a_y_pred)
             pbar.desc = f'[{epoch + 1:3d},{batch_number + 1:3d}];  loss {current_loss:.3f}; accuracy {accuracy * 100:.3f}; learning_rate {optimizer.learning_rate}'
+            if batch_number == batches-1:
+                # end batches
+                last_cost_mean = np.mean(loss_list[-batches:])
 
-        # end batches
-        last_cost_mean = np.mean(loss_list[-batches:])
+                pred_train = model(x_train)
+                pred_train = np.argmax(pred_train, axis=CLASSES_DIM)
+                y_train_classes = np.argmax(y_train, axis=CLASSES_DIM)
+                train_accuracy = np.mean(y_train_classes == pred_train) * 100
+                pbar.desc = f'Epoch {epoch:3d};  loss {last_cost_mean:.3f}; train accuracy {train_accuracy:.3f}; learning_rate {optimizer.learning_rate}'
+                if val_data is not None:
+                    x_test, y_test = val_data
+                    pred = model(x_test)
+                    pred = np.argmax(pred, axis=CLASSES_DIM)
+                    y_true = np.argmax(y_test, axis=CLASSES_DIM)
+                    test_accuracy = np.mean(y_true == pred) * 100
+                    pbar.desc = f'Epoch {epoch:3d};  loss {last_cost_mean:.3f}; train accuracy {train_accuracy:.3f}; learning_rate {optimizer.learning_rate}; test accuracy {test_accuracy:.3f}'
 
-        pred = model(x)
-        pred = np.argmax(pred, axis=CLASSES_DIM)
-        y_true = np.argmax(y, axis=CLASSES_DIM)
-        accuracy = np.mean(y_true == pred) * 100
-        pbar.desc = f'Epoch {epoch:3d};  loss {last_cost_mean:.3f}; accuracy {accuracy:.3f}; learning_rate {optimizer.learning_rate}'
         epoch += 1
