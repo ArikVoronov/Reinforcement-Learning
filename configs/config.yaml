@@ -1,14 +1,14 @@
-run_mode: 'train_evo' #train_evo / train_rl / run_env
+run_mode: 'train_rl' #train_evo / train_rl / run_env
 
 general:
-  seed: 40
+  seed: 46
 
 env:
   name: 'GridWorldEnv'
   parameters:
-    rows: 6
-    cols: 6
-    max_steps: 300
+    rows: 4
+    cols: 4
+    max_steps: 100
 #  name: 'TrackRunnerEnv'
 #  parameters:
 #    run_velocity: 0.015
@@ -17,7 +17,7 @@ env:
 #    max_steps: 300
 
 model:
-  hidden_layers_dims: [ 50 ]
+  hidden_layers_dims: [ 50 ,20]
   save_file: ~
 
 train_evo:
@@ -31,11 +31,11 @@ train_evo:
 
 train_rl:
   reward_discount: 0.95
-  epsilon: 0.9
-  epsilon_decay: 0.95
-  batch_size: 4
+  epsilon: 0.8
+  epsilon_decay: 0.99
+  batch_size: 32
   max_episodes: 5000
-  model_learning_rate: 0.01
+  model_learning_rate: 0.1
   printout_episodes: 50
   output_dir_path: 'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\rl_agents'
 

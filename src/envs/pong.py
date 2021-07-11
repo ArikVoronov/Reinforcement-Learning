@@ -3,7 +3,7 @@ import pygame
 
 from src.envs.consts import *
 from src.envs.env_utils import run_env_with_display, HumanController, CoordinateTransformer
-from src.envs.core import EnvBase
+from src.envs.envs_core import EnvBase
 
 
 class PongEnv(EnvBase):

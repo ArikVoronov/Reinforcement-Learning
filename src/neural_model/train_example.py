@@ -59,7 +59,7 @@ def main():
     batch_size = 8092
     epochs = 50  # Irrelevant to RL
     train_model(x_train, y_train, model=model, epochs=epochs, batch_size=batch_size, optimizer=optimizer,
-                do_grad_check=False, val_data=(x_test, y_test))
+                do_grad_check=True, val_data=(x_test, y_test))
 
 
 if __name__ == '__main__':

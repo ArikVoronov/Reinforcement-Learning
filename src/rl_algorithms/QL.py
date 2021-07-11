@@ -89,8 +89,8 @@ class CLF:
 
                     mean_steps = np.mean(self.episode_steps_list[-self.printout_episodes:])
                     mean_reward = np.mean(self.episode_reward_list[-self.printout_episodes:])
-                    mean_w = np.mean(self.q_approximator.layers_list[-2].w)
-                    pbar.desc = f'steps {mean_steps:.1f} ; reward {mean_reward:.2f}; epsilon {self.epsilon:.3f}, mean w = {mean_w}'
+                    mean_w = np.sqrt(np.mean(self.q_approximator.layers_list[-2].w**2))
+                    pbar.desc = f'steps {mean_steps:.1f} ; reward {mean_reward:.2f}; epsilon {self.epsilon:.3f}, rms w = {mean_w}'
                     if self.printout_episodes is not None:
                         if (episode % self.printout_episodes == 0) and episode > 0:
                             self.epsilon = np.maximum(0.001, self.epsilon * self.epsilon_decay)
@@ -117,18 +117,18 @@ class CLF:
         state = optimization_arrays_dict['state']
         action = optimization_arrays_dict['action']
         reward = optimization_arrays_dict['reward']
-        samples = state.shape[1]
-        if samples < self.batch_size:
-            # print(f'skipping {samples}')
-            return
+        samples = state.shape[0]
+        # if samples < self.batch_size:
+        #     print(f'skipping {samples}')
+            # return
         self.optimizer.zero_grad()
         # Forward pass
         q_next = self.q_approximator(next_state)
         q_current = self.q_approximator(state)  # current after next to save forward context
         y = q_current.copy()
-        targets = reward + self.reward_discount * np.max(q_next, axis=-1)
+        targets = reward + self.reward_discount * np.max(q_next, axis=-1,keepdims=True)
         for sample in range(samples):
-            y[action[sample], sample] = targets[sample]
+            y[sample, action[sample]] = targets[sample]
 
         # Backward pass
         self.q_approximator.calculate_loss(y, q_current)

@@ -2,7 +2,8 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-from core import *
+from src.neural_model.nn_core import *
+
 
 class LossBase(ABC):
     def __init__(self):

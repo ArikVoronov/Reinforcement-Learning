@@ -2,7 +2,7 @@ import pygame
 import numpy as np
 
 from src.envs.consts import *
-from src.envs.core import EnvBase
+from src.envs.envs_core import EnvBase
 from src.envs.env_utils import run_env_with_display, HumanController, CoordinateTransformer
 
 

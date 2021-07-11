@@ -6,6 +6,7 @@ from sklearn.kernel_approximation import RBFSampler
 import src.regressors.linear_regressor as LinearReg
 
 
+
 def replicate_weights(clfs):
     wv0 = clfs[0].Qnet.wv.copy()
     bv0 = clfs[0].Qnet.bv.copy()
@@ -44,7 +45,7 @@ def nullify_qs(network, env):
     network.layers_list[first_fc_layer_index].w = np.tile(w_new[:, None],
                                                           network.layers_list[first_fc_layer_index].w.shape[-1])
     network.layers_list[first_fc_layer_index].b = np.tile(b_new, network.layers_list[first_fc_layer_index].b.shape[-1])[
-                                                  None,:]
+                                                  None, :]
     print('Initial Q values NULLIFIED')
 
 

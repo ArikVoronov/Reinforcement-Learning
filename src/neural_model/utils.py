@@ -1,8 +1,8 @@
 import numpy as np
 from tqdm import tqdm
-from core import *
+from src.neural_model.nn_core import *
 
-
+EPS = 1e-6
 def rms(x, ax=None, kdims=False):
     y = np.sqrt(np.mean(x ** 2, axis=ax, keepdims=kdims))
     return y
@@ -38,19 +38,19 @@ def grad_check(model, x_batch, y_batch):
      to compare with the analytical gradient calculation
      Used for debugging
     """
-    eps = 1e-6
+    delta = 1e-10
     i = 2
     j = 1
-    layer_index = -4
-    model.layers_list[layer_index].w[i, j] -= eps
+    layer_index = -2
+    model.layers_list[layer_index].w[i, j] -= delta
     y_pred_1 = model(x_batch)
-    model.layers_list[layer_index].w[i, j] += eps
+    model.layers_list[layer_index].w[i, j] += delta
     y_pred_2 = model(x_batch)
     cost1 = model.calculate_loss(y_batch, y_pred_1)
     cost2 = model.calculate_loss(y_batch, y_pred_2)
-    dw_approx = (cost2 - cost1) / (eps)
+    dw_approx = (cost2 - cost1) / (delta)
     dw_net = model.layers_list[layer_index].dw[i, j]
-    error = (dw_approx - dw_net) / (np.abs(dw_approx) + np.abs(dw_net) + eps)
+    error = (dw_approx - dw_net) / (np.abs(dw_approx) + np.abs(dw_net) + EPS)
     print(f'dw aprx {dw_approx:.7f}; dw net {dw_net:.7f}; grad check error {error * 100:1.1f}%')
     return dw_approx
 
@@ -102,7 +102,7 @@ def train_model(x_train, y_train, model, epochs, optimizer, val_data=None, batch
             a_y_true = np.argmax(y_batch, axis=CLASSES_DIM)
             accuracy = np.mean(a_y_true == a_y_pred)
             pbar.desc = f'[{epoch + 1:3d},{batch_number + 1:3d}];  loss {current_loss:.3f}; accuracy {accuracy * 100:.3f}; learning_rate {optimizer.learning_rate}'
-            if batch_number == batches-1:
+            if batch_number == batches - 1:
                 # end batches
                 last_cost_mean = np.mean(loss_list[-batches:])
 

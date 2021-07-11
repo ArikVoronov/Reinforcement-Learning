@@ -2,15 +2,15 @@ import gym
 
 from src.neural_model.activation_functions import ReLu2, LinearActivation
 from src.neural_model.layer_classes import FullyConnectedLayer
-from src.neural_model.losses import SmoothL1Loss
+from src.neural_model.losses import SmoothL1Loss,MSELoss
 from src.neural_model.models import Model
 
 
 def setup_fc_model(input_size, output_size, hidden_layers_dims=[50], save_file=None):
     layer_sizes = hidden_layers_dims + [output_size]
 
-    loss = SmoothL1Loss(beta=0.5)
-    # loss = MSELoss()
+    # loss = SmoothL1Loss(beta=0.5)
+    loss = MSELoss()
     activation_list = [ReLu2] * len(hidden_layers_dims) + [LinearActivation]
     layers_list = [FullyConnectedLayer(input_size, layer_sizes[0]), activation_list[0]()]
     for layer_number in range(1, len(layer_sizes)):
