@@ -42,9 +42,9 @@ def nullify_qs(network, env):
     # set FIRST linear layer to be copies of the linreg parameters
     first_fc_layer_index = 1
     network.layers_list[first_fc_layer_index].w = np.tile(w_new[:, None],
-                                                          network.layers_list[first_fc_layer_index].w.shape[0]).T
-    network.layers_list[first_fc_layer_index].b = np.tile(b_new, network.layers_list[first_fc_layer_index].b.shape[0])[
-                                                  :, None]
+                                                          network.layers_list[first_fc_layer_index].w.shape[-1])
+    network.layers_list[first_fc_layer_index].b = np.tile(b_new, network.layers_list[first_fc_layer_index].b.shape[-1])[
+                                                  None,:]
     print('Initial Q values NULLIFIED')
 
 
@@ -102,7 +102,7 @@ class NeuralNetworkAgent:
         self.q_approximator.load_parameters_from_file(weights_file_path)
 
     def pick_action(self, state):
-        state = state.reshape(-1,1)
-        q = self.q_approximator(state).squeeze()
+        state = state.reshape(1, -1)
+        q = self.q_approximator(state)
         best_action = np.argwhere(q == np.amax(q))
         return best_action[0][0]

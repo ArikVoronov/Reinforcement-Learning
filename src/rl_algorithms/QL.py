@@ -11,10 +11,10 @@ from src.envs.env_utils import run_env
 
 
 class CLF:
-    def __init__(self, apx,env,max_episodes, batch_size,model_learning_rate,
+    def __init__(self, apx, env, max_episodes, batch_size, model_learning_rate,
                  reward_discount, epsilon, epsilon_decay,
                  printout_episodes=None, featurize=None, output_dir_path=None):
-        self.env=env
+        self.env = env
         self.q_approximator = copy.deepcopy(apx)
         self.max_episodes = max_episodes
         self.batch_size = batch_size
@@ -51,7 +51,7 @@ class CLF:
         best_reward = None
         for episode in pbar:
             state = self.env.reset()
-            state = state.reshape(-1, 1)
+            state = state.reshape(1, -1)
             # state = self.featurize(state).reshape([-1, 1])
             episode_steps = 0
             episode_reward = 0
@@ -67,7 +67,7 @@ class CLF:
                 for batch_n in range(self.batch_size):
                     action = self.pick_action(state)
                     next_state, reward, done = self.env.step(action)
-                    next_state = next_state.reshape(-1, 1)
+                    next_state = next_state.reshape(1, -1)
                     for k, v in optimization_arrays_dict.items():
                         optimization_arrays_dict[k].append(locals()[k])
                     state = next_state
@@ -106,7 +106,7 @@ class CLF:
                                     best_parameters = None
                                     best_reward = None
                 for k, v in optimization_arrays_dict.items():
-                    optimization_arrays_dict[k] = np.hstack(v)
+                    optimization_arrays_dict[k] = np.vstack(v)
                 self.optimize_step(optimization_arrays_dict, check_grad)
                 if done:
                     break
@@ -126,7 +126,7 @@ class CLF:
         q_next = self.q_approximator(next_state)
         q_current = self.q_approximator(state)  # current after next to save forward context
         y = q_current.copy()
-        targets = reward + self.reward_discount * np.max(q_next, axis=0)
+        targets = reward + self.reward_discount * np.max(q_next, axis=-1)
         for sample in range(samples):
             y[action[sample], sample] = targets[sample]
 
@@ -139,7 +139,7 @@ class CLF:
 
     def epsilon_policy(self, state):
         q = self.q_approximator(state)
-        number_of_actions = q.shape[0]
+        number_of_actions = q.shape[-1]
         if np.isnan(q).any():
             raise ValueError('q approximation is NaN')
         q = q.squeeze()
@@ -149,7 +149,7 @@ class CLF:
         return action_probabilities
 
     def pick_action(self, state):
-        state = state.reshape(-1, 1)
+        state = state.reshape(1, -1)
         action_probability = self.epsilon_policy(state)
         number_of_actions = action_probability.shape[0]
         action = np.random.choice(number_of_actions, p=action_probability)

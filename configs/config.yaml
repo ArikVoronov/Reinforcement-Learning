@@ -1,15 +1,20 @@
-run_mode: 'train_rl' #train_evo / train_rl / run_env
+run_mode: 'train_evo' #train_evo / train_rl / run_env
 
 general:
-  seed: 42
+  seed: 40
 
 env:
-  name: 'TrackRunnerEnv'
+  name: 'GridWorldEnv'
   parameters:
-    run_velocity: 0.015
-    turn_degrees: 15
-    track: 'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\src\Envs\Tracks\tracky.pkl'
+    rows: 6
+    cols: 6
     max_steps: 300
+#  name: 'TrackRunnerEnv'
+#  parameters:
+#    run_velocity: 0.015
+#    turn_degrees: 15
+#    track: 'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\src\Envs\Tracks\tracky.pkl'
+#    max_steps: 300
 
 model:
   hidden_layers_dims: [ 50 ]
@@ -19,9 +24,9 @@ train_evo:
   specimen_count: 200
   survivor_count: 20
   max_iterations: 20
-  mutation_rate: 0.01
+  mutation_rate: 0.0001
   generation_method: "Random Splice"
-  fitness_target: 0.15
+  fitness_target: 0
   output_dir: 'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\evo_agents'
 
 train_rl:
@@ -30,7 +35,7 @@ train_rl:
   epsilon_decay: 0.95
   batch_size: 4
   max_episodes: 5000
-  model_learning_rate: 0.001
+  model_learning_rate: 0.01
   printout_episodes: 50
   output_dir_path: 'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\rl_agents'
 
