@@ -89,7 +89,7 @@ class CLF:
 
                     mean_steps = np.mean(self.episode_steps_list[-self.printout_episodes:])
                     mean_reward = np.mean(self.episode_reward_list[-self.printout_episodes:])
-                    mean_w = np.sqrt(np.mean(self.q_approximator.layers_list[-2].w**2))
+                    mean_w = np.sqrt(np.mean(self.q_approximator.layers_list[-2].weights ** 2))
                     pbar.desc = f'steps {mean_steps:.1f} ; reward {mean_reward:.2f}; epsilon {self.epsilon:.3f}, rms w = {mean_w}'
                     if self.printout_episodes is not None:
                         if (episode % self.printout_episodes == 0) and episode > 0:

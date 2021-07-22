@@ -1,8 +1,12 @@
 import numpy as np
 from tqdm import tqdm
 from src.neural_model.nn_core import *
+from src.neural_model.layer_classes import ConvLayer, FullyConnectedLayer
+from src.neural_model.optim import GradientClipper
 
 EPS = 1e-6
+
+
 def rms(x, ax=None, kdims=False):
     y = np.sqrt(np.mean(x ** 2, axis=ax, keepdims=kdims))
     return y
@@ -38,20 +42,30 @@ def grad_check(model, x_batch, y_batch):
      to compare with the analytical gradient calculation
      Used for debugging
     """
-    delta = 1e-10
+    delta = 1e-6
+    layer_index = 1
+
+    layer = model.layers_list[layer_index]
     i = 2
     j = 1
-    layer_index = -2
-    model.layers_list[layer_index].w[i, j] -= delta
+    if isinstance(layer, ConvLayer):
+        indices = (0, 0, i, j)
+    elif isinstance(layer, FullyConnectedLayer):
+        indices = (i, j)
+    else:
+        raise Exception(f'layer is of type {type(layer)}')
+
+    dw_net = layer.dw[indices]
+
+    layer.weights[indices] -= delta
     y_pred_1 = model(x_batch)
-    model.layers_list[layer_index].w[i, j] += delta
+    layer.weights[indices] += delta
     y_pred_2 = model(x_batch)
     cost1 = model.calculate_loss(y_batch, y_pred_1)
     cost2 = model.calculate_loss(y_batch, y_pred_2)
     dw_approx = (cost2 - cost1) / (delta)
-    dw_net = model.layers_list[layer_index].dw[i, j]
     error = (dw_approx - dw_net) / (np.abs(dw_approx) + np.abs(dw_net) + EPS)
-    print(f'dw aprx {dw_approx:.7f}; dw net {dw_net:.7f}; grad check error {error * 100:1.1f}%')
+    print(f'layer {layer_index}{type(layer)},dw aprx {dw_approx:.7f}; dw net {dw_net:.7f}; grad check error {error * 100:1.1f}%')
     return dw_approx
 
 
@@ -70,13 +84,17 @@ class DataLoader:
         return x_batch, y_batch
 
 
-def train_model(x_train, y_train, model, epochs, optimizer, val_data=None, batch_size=None, do_grad_check=False):
+def train_model(x_train, y_train, model, epochs, optimizer, val_data=None, batch_size=None, clip_grad_bounds=None,
+                do_grad_check=False):
     if batch_size is None or batch_size >= x_train.shape[SAMPLES_DIM]:
         batch_size = x_train.shape[SAMPLES_DIM]
     # Begin optimization iterations
     loss_list = []  # Loss list
     data_loader = DataLoader(x_train, y_train, batch_size)
     batches = int(np.floor(x_train.shape[SAMPLES_DIM] / batch_size)) + 1  # Number of batches per epoch
+    clipper = None
+    if clip_grad_bounds is not None:
+        clipper = GradientClipper(model.layers_list, clip_lower=clip_grad_bounds[0], clip_upper=[1])
     for epoch in range(epochs):
         # optimizer.learning_rate = optimizer.learning_rate*0.99
         pbar = tqdm(range(batches))
@@ -94,6 +112,8 @@ def train_model(x_train, y_train, model, epochs, optimizer, val_data=None, batch
             model.backward()
             if do_grad_check:
                 grad_check(model, x_batch, y_batch)
+            if clipper is not None:
+                clipper.clip_grads()
             optimizer.step()
 
             # Metrics
@@ -102,21 +122,21 @@ def train_model(x_train, y_train, model, epochs, optimizer, val_data=None, batch
             a_y_true = np.argmax(y_batch, axis=CLASSES_DIM)
             accuracy = np.mean(a_y_true == a_y_pred)
             pbar.desc = f'[{epoch + 1:3d},{batch_number + 1:3d}];  loss {current_loss:.3f}; accuracy {accuracy * 100:.3f}; learning_rate {optimizer.learning_rate}'
-            if batch_number == batches - 1:
-                # end batches
-                last_cost_mean = np.mean(loss_list[-batches:])
-
-                pred_train = model(x_train)
-                pred_train = np.argmax(pred_train, axis=CLASSES_DIM)
-                y_train_classes = np.argmax(y_train, axis=CLASSES_DIM)
-                train_accuracy = np.mean(y_train_classes == pred_train) * 100
-                pbar.desc = f'Epoch {epoch:3d};  loss {last_cost_mean:.3f}; train accuracy {train_accuracy:.3f}; learning_rate {optimizer.learning_rate}'
-                if val_data is not None:
-                    x_test, y_test = val_data
-                    pred = model(x_test)
-                    pred = np.argmax(pred, axis=CLASSES_DIM)
-                    y_true = np.argmax(y_test, axis=CLASSES_DIM)
-                    test_accuracy = np.mean(y_true == pred) * 100
-                    pbar.desc = f'Epoch {epoch:3d};  loss {last_cost_mean:.3f}; train accuracy {train_accuracy:.3f}; learning_rate {optimizer.learning_rate}; test accuracy {test_accuracy:.3f}'
+            # if batch_number == batches - 1:
+            #     # end batches
+            #     last_cost_mean = np.mean(loss_list[-batches:])
+            #
+            #     pred_train = model(x_train)
+            #     pred_train = np.argmax(pred_train, axis=CLASSES_DIM)
+            #     y_train_classes = np.argmax(y_train, axis=CLASSES_DIM)
+            #     train_accuracy = np.mean(y_train_classes == pred_train) * 100
+            #     pbar.desc = f'Epoch {epoch:3d};  loss {last_cost_mean:.3f}; train accuracy {train_accuracy:.3f}; learning_rate {optimizer.learning_rate}'
+            #     if val_data is not None:
+            #         x_test, y_test = val_data
+            #         pred = model(x_test)
+            #         pred = np.argmax(pred, axis=CLASSES_DIM)
+            #         y_true = np.argmax(y_test, axis=CLASSES_DIM)
+            #         test_accuracy = np.mean(y_true == pred) * 100
+            #         pbar.desc = f'Epoch {epoch:3d};  loss {last_cost_mean:.3f}; train accuracy {train_accuracy:.3f}; learning_rate {optimizer.learning_rate}; test accuracy {test_accuracy:.3f}'
 
         epoch += 1

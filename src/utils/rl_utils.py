@@ -42,9 +42,9 @@ def nullify_qs(network, env):
 
     # set FIRST linear layer to be copies of the linreg parameters
     first_fc_layer_index = 1
-    network.layers_list[first_fc_layer_index].w = np.tile(w_new[:, None],
-                                                          network.layers_list[first_fc_layer_index].w.shape[-1])
-    network.layers_list[first_fc_layer_index].b = np.tile(b_new, network.layers_list[first_fc_layer_index].b.shape[-1])[
+    network.layers_list[first_fc_layer_index].weights = np.tile(w_new[:, None],
+                                                                network.layers_list[first_fc_layer_index].weights.shape[-1])
+    network.layers_list[first_fc_layer_index].bias = np.tile(b_new, network.layers_list[first_fc_layer_index].bias.shape[-1])[
                                                   None, :]
     print('Initial Q values NULLIFIED')
 

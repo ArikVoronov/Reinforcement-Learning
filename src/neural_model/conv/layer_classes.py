@@ -37,7 +37,7 @@ class ConvLayer:
             dz = dz.reshape(z.shape)
         elif type(next_layer) == MaxPoolLayer:
             ind_mat = conv_indices(z, [next_layer.lp[1][0], next_layer.lp[1][1], next_layer.lp[1][3]])
-            x_max_ind = next_layer.x_max_ind
+            x_max_ind = next_layer.max_indices
             dz = dz_pool(z, x_max_ind, ind_mat, dz_next)
         elif type(next_layer) == ConvLayer:
             ind_mat = conv_indices(z, [w.shape[0], w.shape[1], self.stride])
@@ -102,7 +102,7 @@ class MaxPoolLayer(LayerBase):
             dz = dz.reshape(z.shape)
         elif type(self._next_layer) == MaxPoolLayer:
             ind_mat = conv_indices(z, [self.lp[1][0], self.lp[1][1], self.stride])
-            x_max_ind = self._next_layer.x_max_ind
+            x_max_ind = self._next_layer.max_indices
             dz = dz_pool(z, x_max_ind, ind_mat, grad_output)
         elif type(self._next_layer) == ConvLayer:
             ind_mat = conv_indices(z, [self.w.shape[0], self.w.shape[1], self.stride])

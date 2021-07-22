@@ -71,7 +71,7 @@ class NLLoss(LossBase):
         super(NLLoss, self).__init__()
 
     def forward(self, ctx, target, layer_input):
-        loss_per_class = -target * np.log(layer_input)
+        loss_per_class = -target * np.log(layer_input+EPSILON)
         loss = np.sum(loss_per_class, axis=CLASSES_DIM)
         loss = np.mean(loss)
         ctx.save_for_backward(layer_input, target)
@@ -80,7 +80,7 @@ class NLLoss(LossBase):
     def backward(self, ctx):
         layer_input, target = ctx.get_saved_tensors()
         number_of_samples = layer_input.shape[SAMPLES_DIM]
-        grad = -target * 1 / layer_input
+        grad = -target * 1 / (layer_input+EPSILON)
         grad /= number_of_samples
         return grad
 

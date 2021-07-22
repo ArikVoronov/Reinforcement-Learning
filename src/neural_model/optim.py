@@ -3,6 +3,19 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 
+class GradientClipper():
+    def __init__(self, layers, clip_lower, clip_upper):
+        self.layers = layers
+        self.clip_lower = clip_lower
+        self.clip_upper = clip_upper
+
+    def clip_grads(self):
+        for layer in self.layers:
+            if layer.grad_required:
+                layer.dw = np.clip(layer.dw, a_min=self.clip_lower, a_max=self.clip_upper)
+                layer.db = np.clip(layer.db, a_min=self.clip_lower, a_max=self.clip_upper)
+
+
 class OptimizerBase(ABC):
     def __init__(self, layers):
         self.layers = layers
@@ -15,8 +28,8 @@ class OptimizerBase(ABC):
     def zero_grad(self):
         for layer in self.layers:
             if layer.grad_required:
-                layer.dw = np.zeros_like(layer.w)
-                layer.db = np.zeros_like(layer.b)
+                layer.dw = np.zeros_like(layer.weights)
+                layer.db = np.zeros_like(layer.bias)
 
 
 class SGD(OptimizerBase):
@@ -27,8 +40,8 @@ class SGD(OptimizerBase):
     def step(self):
         for layer in self.layers:
             if layer.grad_required:
-                layer.w += -self.learning_rate * layer.dw
-                layer.b += -self.learning_rate * layer.db
+                layer.weights += -self.learning_rate * layer.dw
+                layer.bias += -self.learning_rate * layer.db
 
 
 class ADAM(OptimizerBase):
@@ -50,10 +63,10 @@ class ADAM(OptimizerBase):
     def _initialize_parameters(self):
         for layer_number, layer in enumerate(self.layers):
             if layer.grad_required:
-                self.vw.append(np.zeros_like(layer.w))
-                self.sw.append(np.zeros_like(layer.w))
-                self.vb.append(np.zeros_like(layer.b))
-                self.sb.append(np.zeros_like(layer.b))
+                self.vw.append(np.zeros_like(layer.weights))
+                self.sw.append(np.zeros_like(layer.weights))
+                self.vb.append(np.zeros_like(layer.bias))
+                self.sb.append(np.zeros_like(layer.bias))
             else:
                 self.vw.append(np.empty(0))
                 self.sw.append(np.empty(0))
@@ -65,11 +78,11 @@ class ADAM(OptimizerBase):
         # print(np.mean(self.vw[1]))
         for layer_number, layer in enumerate(self.layers):
             if layer.grad_required:
-                layer.w = (1 - self.lam) * layer.w
-                self.vw[layer_number], self.sw[layer_number] = self.step_parameter(layer.w, layer.dw,
+                layer.weights = (1 - self.lam) * layer.weights
+                self.vw[layer_number], self.sw[layer_number] = self.step_parameter(layer.weights, layer.dw,
                                                                                    self.vw[layer_number],
                                                                                    self.sw[layer_number], self.t)
-                self.vb[layer_number], self.sb[layer_number] = self.step_parameter(layer.b, layer.db,
+                self.vb[layer_number], self.sb[layer_number] = self.step_parameter(layer.bias, layer.db,
                                                                                    self.vb[layer_number],
                                                                                    self.sb[layer_number], self.t)
 
