@@ -3,7 +3,7 @@ import numpy as np
 from src.neural_model.activation_functions import ReLu, Softmax
 from src.neural_model.layer_classes import FullyConnectedLayer
 from src.neural_model.losses import NLLoss, MSELoss
-from src.neural_model.models import Model
+from src.neural_model.models import SequentialModel
 
 from src.neural_model.optim import SGD, ADAM
 from src.neural_model.utils import squish_range, normalize, make_one_hot_vector, train_model
@@ -22,7 +22,7 @@ def make_example_net():
         layers_list.append(FullyConnectedLayer(current_layer_size[0], current_layer_size[1]))
         layers_list.append(activation_list[layer_number]())
 
-    neural_network = Model(layers_list, loss=loss)
+    neural_network = SequentialModel(layers_list, loss=loss)
     return neural_network
 
 

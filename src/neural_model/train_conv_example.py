@@ -3,7 +3,7 @@ import numpy as np
 from src.neural_model.activation_functions import ReLu, Softmax
 from src.neural_model.layer_classes import FullyConnectedLayer, ConvLayer, FlattenLayer, calculate_fc_after_conv_input
 from src.neural_model.losses import NLLoss
-from src.neural_model.models import Model
+from src.neural_model.models import SequentialModel
 
 from src.neural_model.optim import SGD
 from src.neural_model.utils import squish_range, normalize, make_one_hot_vector, train_model
@@ -14,9 +14,9 @@ def make_example_net():
     input_size = (28, 28, 3)
     # input_size = (4, 4, 3)
     output_size = 10
-    kernel_size = 5
+    kernel_size = 3
     conv_channels = 16
-    stride = 3
+    stride = 2
 
     loss = NLLoss()
     layers_list = list()
@@ -28,7 +28,7 @@ def make_example_net():
     fc_input_size = calculate_fc_after_conv_input(input_size[:2], conv_channels, kernel_size, stride)
     layers_list += [FullyConnectedLayer(fc_input_size, output_size), Softmax()]
 
-    neural_network = Model(layers_list, loss=loss)
+    neural_network = SequentialModel(layers_list, loss=loss)
     return neural_network
 
 
@@ -48,12 +48,13 @@ def data_preprocessing(x, y):
 def main():
     np.random.seed(42)
     model = make_example_net()
+    print(model)
     data_root = r'F:\My_train Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\data'
     mnist_trainset = datasets.MNIST(root=data_root, train=True, download=True, transform=None)
     mnist_testset = datasets.MNIST(root=data_root, train=False, download=True, transform=None)
-    x_train, y_train = mnist_trainset.data, mnist_trainset.train_labels
+    x_train, y_train = mnist_trainset.data, mnist_trainset.targets
     x_train, y_train = data_preprocessing(x_train, y_train)
-    x_test, y_test = mnist_testset.data, mnist_testset.train_labels
+    x_test, y_test = mnist_testset.data, mnist_testset.targets
     x_test, y_test = data_preprocessing(x_test, y_test)
 
     # Training parameters

@@ -3,7 +3,7 @@ import pickle
 from src.neural_model.layer_classes import Context, InputLayer
 
 
-class Model:
+class SequentialModel:
     EPSILON = 1e-10
 
     def __init__(self, layers_list, loss):
@@ -57,3 +57,10 @@ class Model:
 
     def __call__(self, x):
         return self.forward(x)
+
+    def __str__(self):
+        print_str = f'{self.__class__.__name__}\n'
+        print_str += '-'*len(print_str)+'\n'
+        for layer in self.layers_list:
+            print_str += layer.__str__() + '\n'
+        return print_str

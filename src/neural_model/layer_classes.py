@@ -32,6 +32,9 @@ class LayerBase(ABC):
     def backward(self, ctx, output):
         pass
 
+    def __str__(self):
+        return f'{self.__class__.__name__}'
+
     def set_parameters(self, parameters_list):
         pass
 
@@ -53,6 +56,9 @@ class InputLayer(LayerBase):
 
     def backward(self, ctx, output):
         return output
+
+    def __str__(self):
+        return f'{self.__class__.__name__}'
 
 
 class FullyConnectedLayer(LayerBase):
@@ -103,6 +109,10 @@ class FullyConnectedLayer(LayerBase):
     def get_parameters(self):
         return [self.weights, self.bias]
 
+    def __str__(self):
+        parameter_count = self.weights.size + self.bias.size
+        return f'{self.__class__.__name__} - size ({self._input_size},{self._output_size}) - total parameters {parameter_count} '
+
 
 class ConvLayer(LayerBase):
     def __init__(self, in_dims, in_channels, out_channels, kernel_size, stride=1, padding=0):
@@ -114,7 +124,7 @@ class ConvLayer(LayerBase):
         self.kernel_size = kernel_size
         self.stride = stride
         self.in_channels = in_channels
-        self.out_channel = out_channels
+        self.out_channels = out_channels
         self.out_dims = get_conv_output_shape(self.in_dims, self.kernel_size, self.stride)
 
         self.weights = None
@@ -126,14 +136,14 @@ class ConvLayer(LayerBase):
         self._initialize_weights()
 
     def _initialize_weights(self):
-        f_total = self.kernel_size * self.kernel_size * self.in_channels * self.out_channel
-        kernel_filter_shape = [self.out_channel, self.in_channels, self.kernel_size, self.kernel_size, ]
+        f_total = self.kernel_size * self.kernel_size * self.in_channels * self.out_channels
+        kernel_filter_shape = [self.out_channels, self.in_channels, self.kernel_size, self.kernel_size, ]
         signs = (2 * np.random.randint(0, 2, size=f_total) - 1).reshape(kernel_filter_shape)
         var = np.sqrt(2 / self.in_channels)  # Initial weights normalization scalar, possibly can be improved
         w0 = (np.random.randint(10, 1e2, size=f_total) / 1e2).reshape(kernel_filter_shape)
         self.weights = 1 * var * signs * w0
         # self.weights = np.ones_like(self.weights)
-        self.bias = np.zeros([1, self.out_channel, self.out_dims[0], self.out_dims[1]])
+        self.bias = np.zeros([1, self.out_channels, self.out_dims[0], self.out_dims[1]])
 
     def forward(self, ctx, layer_input):
         # layer_input [batch_size, channels, height, width]
@@ -154,6 +164,10 @@ class ConvLayer(LayerBase):
         # dz = self.calculate_conv_gradient(layer_input, self.weights, self.conv_indices, grad_output)
         dz = np.ones_like(layer_input)
         return dz
+
+    def __str__(self):
+        parameter_count = self.weights.size + self.bias.size
+        return f'{self.__class__.__name__} - size ({self.out_channels},{self.in_channels},{self.kernel_size},{self.kernel_size})- total parameters {parameter_count}'
 
     @staticmethod
     def _conv3d_explicit(x, conv_filter, stride, conv_indices):

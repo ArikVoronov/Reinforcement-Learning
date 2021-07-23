@@ -3,7 +3,7 @@ import gym
 from src.neural_model.activation_functions import ReLu2, LinearActivation
 from src.neural_model.layer_classes import FullyConnectedLayer
 from src.neural_model.losses import SmoothL1Loss,MSELoss
-from src.neural_model.models import Model
+from src.neural_model.models import SequentialModel
 
 
 def setup_fc_model(input_size, output_size, hidden_layers_dims=[50], save_file=None):
@@ -18,7 +18,7 @@ def setup_fc_model(input_size, output_size, hidden_layers_dims=[50], save_file=N
             FullyConnectedLayer(input_size=layer_sizes[layer_number - 1], output_size=layer_sizes[layer_number]))
         layers_list.append(activation_list[layer_number]())
 
-    model = Model(layers_list, loss=loss)
+    model = SequentialModel(layers_list, loss=loss)
     if save_file is not None:
         model.load_parameters_from_file(save_file)
         print('\nVariables loaded from ' + save_file)
