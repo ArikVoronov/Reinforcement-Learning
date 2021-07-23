@@ -112,11 +112,11 @@ class ConvLayer(LayerBase):
         # kernel [out_channels, in_channels, kernel_size, kernel_size]
         self.in_dims = in_dims
         self.kernel_size = kernel_size
-        self.out_dims = (self.in_dims[0] - (self.kernel_size - 1), self.in_dims[1] - (self.kernel_size - 1))
+        self.stride = stride
         self.in_channels = in_channels
         self.out_channel = out_channels
+        self.out_dims = get_conv_output_shape(self.in_dims, self.kernel_size, self.stride)
 
-        self.stride = stride
         self.weights = None
         self.bias = None
         self.dw = None
@@ -159,15 +159,9 @@ class ConvLayer(LayerBase):
     def _conv3d_explicit(x, conv_filter, stride, conv_indices):
         samples = x.shape[0]
         out_channels = conv_filter.shape[0]
-        kernel_size = conv_filter.shape[-1]
-        conv_results = list()
-
-        input_rows = x.shape[2]
-        input_cols = x.shape[3]
         f_rows = conv_filter.shape[2]
         f_cols = conv_filter.shape[3]
-        out_rows = int(np.floor((input_rows - f_rows) / stride + 1))
-        out_cols = int(np.floor((input_cols - f_cols) / stride + 1))
+        out_rows, out_cols = get_conv_output_shape(x.shape[2:], conv_filter.shape[2:], stride)
 
         conv_mat = np.empty((samples, out_channels, out_rows, out_cols))
         conv_mat[:] = np.nan
@@ -193,12 +187,7 @@ class ConvLayer(LayerBase):
         x_str = x.reshape(x.shape[0], x.shape[1], -1)
         filter_str = conv_filter.reshape(conv_filter.shape[0], conv_filter.shape[1], -1)
 
-        input_rows = x.shape[2]
-        input_cols = x.shape[3]
-        f_rows = conv_filter.shape[2]
-        f_cols = conv_filter.shape[3]
-        out_rows = int(np.floor((input_rows - f_rows) / stride + 1))
-        out_cols = int(np.floor((input_cols - f_cols) / stride + 1))
+        out_rows, out_cols = get_conv_output_shape(x.shape[2:], conv_filter.shape[2], stride)
 
         xb = x_str[:, :, conv_indices]
 
@@ -206,20 +195,6 @@ class ConvLayer(LayerBase):
         xc = xc.reshape(xc.shape[0], xc.shape[1], xc.shape[2] * xc.shape[3])
         fc = filter_str.reshape(filter_str.shape[0], -1)
         conv_mat = np.dot(xc, fc.T).swapaxes(1, 2)
-        # xc = xb
-        # fc = filter_str.reshape(filter_str.shape[0], filter_str.shape[1], -1)
-        # in_channels = conv_filter.shape[1]
-        # conv_mat = np.dot(xc,fc.T).swapaxes(1,2)
-
-        # conv_mat = np.zeros((samples, out_channels, out_rows, out_cols))
-        # conv_mat[:] = np.nan
-        # for sample in range(samples):
-        #     conv_sample = np.zeros([out_channels, out_rows * out_cols])
-        #     for channel in range(in_channels):
-        #         conv_sample += np.dot(fc[:, channel, :, ], xc[sample, channel, :, :].T)
-        #     conv_sample = conv_sample.reshape([1, out_channels, out_rows, out_cols])
-        #     conv_mat[sample, :, :, :] = conv_sample
-        # conv_mat = conv_mat.swapaxes(1, 2)
         conv_mat = conv_mat.reshape(samples, out_channels, out_rows, out_cols)
         return conv_mat
 
@@ -259,12 +234,47 @@ class ConvLayer(LayerBase):
 
     def dw_calc(self, layer_input, grad_output):
         if self.dw_conv_indices is None:
-            self.dw_conv_indices = get_convolution_vector_indices(layer_input.shape[2:], grad_output.shape[2:],
-                                                                  self.stride)
+            # self.dw_conv_indices = get_convolution_vector_indices(layer_input.shape[2:], grad_output.shape[2:],
+            #                                                       self.stride)
+            self.dw_conv_indices = get_convolution_vector_indices(layer_input.shape[2:],
+                                                                  (self.kernel_size, self.kernel_size),
+                                                                  self.stride).T
 
-        dw = self._conv3d(layer_input.swapaxes(0, 1), grad_output.swapaxes(0, 1), self.stride, self.dw_conv_indices)
-        dw = dw.swapaxes(0, 1)
+        # dw = self._conv3d(layer_input.swapaxes(0, 1), grad_output.swapaxes(0, 1), self.stride, self.dw_conv_indices)
+        # dw = dw.swapaxes(0, 1)
+        dw = self.dw_conv(layer_input.swapaxes(0, 1), grad_output.swapaxes(0, 1), self.kernel_size, self.stride,
+                          self.dw_conv_indices)
+        # dw = dw.swapaxes(0, 1)
         return dw
+
+    def dw_conv(self, x, out_grad, kernel_size, stride, conv_indices):
+        if out_grad.shape[1] != x.shape[1]:
+            raise Exception('Inconsistent depths for filter and input')
+        # x[samples,channels,x,y]
+        # f[out_channels,in_channels,x,y]
+        in_channels = x.shape[0]
+        out_channels = out_grad.shape[0]
+
+        x_str = x.reshape(x.shape[0], x.shape[1], -1)
+        filter_str = out_grad.reshape(out_grad.shape[0], out_grad.shape[1], -1)
+
+        input_rows = x.shape[2]
+        input_cols = x.shape[3]
+        f_rows = out_grad.shape[2]
+        f_cols = out_grad.shape[3]
+        out_rows = kernel_size
+        out_cols = kernel_size
+
+        xb = x_str[:, :, conv_indices]
+
+        xc = xb.swapaxes(2, 1)
+        xc = xc.reshape(xc.shape[0], xc.shape[1], xc.shape[2] * xc.shape[3])
+        fc = filter_str.reshape(filter_str.shape[0], -1)
+        conv_mat = np.dot(xc, fc.T).swapaxes(1, 2)
+        conv_mat = conv_mat.reshape(in_channels, out_channels, out_rows, out_cols)
+
+        conv_mat = conv_mat.swapaxes(0, 1)
+        return conv_mat
 
     # def dw_conv_indices(self, layer_input, filter_shape, stride):
     #     # filter_parameters [fh,fw,stride]
@@ -383,8 +393,7 @@ def get_convolution_vector_indices(input_shape, kernel_shape, stride):
     input_rows, input_cols = input_shape
     f_rows, f_cols = kernel_shape
 
-    out_rows = int(np.floor((input_rows - f_rows) / stride + 1))
-    out_cols = int(np.floor((input_cols - f_cols) / stride + 1))
+    out_rows, out_cols = get_conv_output_shape(input_shape, kernel_shape[0], stride)
 
     # The indexes for the first filter (top left of matrix)
     single_kernel_indices = (np.tile(np.arange(0, f_cols), (f_rows, 1)) +
@@ -399,3 +408,14 @@ def get_convolution_vector_indices(input_shape, kernel_shape, stride):
 
     conv_vector_indices = ind_tile.reshape(-1, ind_tile.shape[-1])
     return conv_vector_indices
+
+
+def calculate_fc_after_conv_input(input_size, input_channels, kernel_size, stride):
+    output_size = get_conv_output_shape(input_size, kernel_size, stride)
+    fc_input_size = output_size[0] * output_size[1] * input_channels
+    return fc_input_size
+
+
+def get_conv_output_shape(input_size, kernel_size, stride):
+    output_size = ((input_size[0] - kernel_size + 1) // stride, (input_size[1] - kernel_size + 1) // stride)
+    return output_size

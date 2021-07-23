@@ -46,8 +46,8 @@ def grad_check(model, x_batch, y_batch):
     layer_index = 1
 
     layer = model.layers_list[layer_index]
-    i = 2
-    j = 1
+    i = 1
+    j = 0
     if isinstance(layer, ConvLayer):
         indices = (0, 0, i, j)
     elif isinstance(layer, FullyConnectedLayer):
@@ -65,7 +65,8 @@ def grad_check(model, x_batch, y_batch):
     cost2 = model.calculate_loss(y_batch, y_pred_2)
     dw_approx = (cost2 - cost1) / (delta)
     error = (dw_approx - dw_net) / (np.abs(dw_approx) + np.abs(dw_net) + EPS)
-    print(f'layer {layer_index}{type(layer)},dw aprx {dw_approx:.7f}; dw net {dw_net:.7f}; grad check error {error * 100:1.1f}%')
+    print(
+        f'layer {layer_index}{type(layer)},dw aprx {dw_approx:.7f}; dw net {dw_net:.7f}; grad check error {error * 100:1.1f}%')
     return dw_approx
 
 
@@ -140,3 +141,5 @@ def train_model(x_train, y_train, model, epochs, optimizer, val_data=None, batch
             #         pbar.desc = f'Epoch {epoch:3d};  loss {last_cost_mean:.3f}; train accuracy {train_accuracy:.3f}; learning_rate {optimizer.learning_rate}; test accuracy {test_accuracy:.3f}'
 
         epoch += 1
+
+

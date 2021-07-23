@@ -1,33 +1,31 @@
 import numpy as np
 
 from src.neural_model.activation_functions import ReLu, Softmax
-from src.neural_model.layer_classes import FullyConnectedLayer, ConvLayer, FlattenLayer
-from src.neural_model.losses import NLLoss, MSELoss
+from src.neural_model.layer_classes import FullyConnectedLayer, ConvLayer, FlattenLayer, calculate_fc_after_conv_input
+from src.neural_model.losses import NLLoss
 from src.neural_model.models import Model
 
-from src.neural_model.optim import SGD, ADAM
+from src.neural_model.optim import SGD
 from src.neural_model.utils import squish_range, normalize, make_one_hot_vector, train_model
 import torchvision.datasets as datasets
 
-
-def calculate_fc_after_conv_input(input_size, input_channels, kernel_size):
-    output_size = ((input_size[0] - kernel_size + 1), (input_size[1] - kernel_size + 1))
-    fc_input_size = output_size[0] * output_size[1] * input_channels
-    return fc_input_size
 
 def make_example_net():
     input_size = (28, 28, 3)
     # input_size = (4, 4, 3)
     output_size = 10
-    kernel_size = 3
+    kernel_size = 5
     conv_channels = 16
+    stride = 3
 
     loss = NLLoss()
     layers_list = list()
-    layers_list += [ConvLayer(input_size[:2], in_channels=input_size[-1], out_channels=conv_channels, kernel_size=kernel_size), ReLu()]
+    layers_list += [
+        ConvLayer(input_size[:2], in_channels=input_size[-1], out_channels=conv_channels, kernel_size=kernel_size,
+                  stride=stride), ReLu()]
     layers_list += [FlattenLayer()]
 
-    fc_input_size = calculate_fc_after_conv_input(input_size[:2],conv_channels,kernel_size)
+    fc_input_size = calculate_fc_after_conv_input(input_size[:2], conv_channels, kernel_size, stride)
     layers_list += [FullyConnectedLayer(fc_input_size, output_size), Softmax()]
 
     neural_network = Model(layers_list, loss=loss)
