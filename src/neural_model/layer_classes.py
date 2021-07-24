@@ -214,12 +214,17 @@ class ConvLayer(LayerBase):
 
     @staticmethod
     def calculate_conv_gradient(z, f, ind_mat, dz_next):
-        f_str = f.reshape(-1, f.shape[2], f.shape[3])
-        dz_n_str = dz_next.reshape(-1, dz_next.shape[2], dz_next.shape[3])
+        # f_shape [fh,fw,in_channels,out_filters ]
+        z = np.rollaxis(np.rollaxis(z, 0, 4), 0, 3)
+        dz_next = np.rollaxis(np.rollaxis(dz_next, 0, 4), 0, 3)
+        f = np.rollaxis(np.rollaxis(f, 0, 4), 0, 3)
 
-        chan_ind = np.arange(f.shape[2]).reshape(1, 1, -1, 1)
-        filt_ind = np.arange(f.shape[3]).reshape(1, 1, 1, -1)
-        dz_ind = np.arange(dz_n_str.shape[0]).reshape(-1, 1, 1, 1)
+        f_str = f.reshape(-1, f.shape[2], f.shape[3])
+        dz_n_str = dz_next.reshape([-1, dz_next.shape[2], dz_next.shape[3]])
+
+        chan_ind = np.arange(f.shape[2]).reshape([1, 1, -1, 1])
+        filt_ind = np.arange(f.shape[3]).reshape([1, 1, 1, -1])
+        dz_ind = np.arange(dz_n_str.shape[0]).reshape([-1, 1, 1, 1])
         ind_m2 = np.tile(ind_mat[:, :, None, None], (1, 1, f.shape[2], f.shape[3]))
 
         '''
@@ -244,24 +249,19 @@ class ConvLayer(LayerBase):
         #    dz_str = np.sum(np.sum(dz_mat, axis = 0),axis = -2)
 
         dz = dz_str.reshape([z.shape[0], z.shape[1], z.shape[2], z.shape[3]])
+        dz = np.rollaxis(np.rollaxis(dz, 3, 0), 3, 1)
         return dz
 
     def dw_calc(self, layer_input, grad_output):
         if self.dw_conv_indices is None:
-            # self.dw_conv_indices = get_convolution_vector_indices(layer_input.shape[2:], grad_output.shape[2:],
-            #                                                       self.stride)
             self.dw_conv_indices = get_convolution_vector_indices(layer_input.shape[2:],
                                                                   (self.kernel_size, self.kernel_size),
                                                                   self.stride).T
-
-        # dw = self._conv3d(layer_input.swapaxes(0, 1), grad_output.swapaxes(0, 1), self.stride, self.dw_conv_indices)
-        # dw = dw.swapaxes(0, 1)
-        dw = self.dw_conv(layer_input.swapaxes(0, 1), grad_output.swapaxes(0, 1), self.kernel_size, self.stride,
+        dw = self.dw_conv(layer_input.swapaxes(0, 1), grad_output.swapaxes(0, 1), self.kernel_size,
                           self.dw_conv_indices)
-        # dw = dw.swapaxes(0, 1)
         return dw
 
-    def dw_conv(self, x, out_grad, kernel_size, stride, conv_indices):
+    def dw_conv(self, x, out_grad, kernel_size, conv_indices):
         if out_grad.shape[1] != x.shape[1]:
             raise Exception('Inconsistent depths for filter and input')
         # x[samples,channels,x,y]
@@ -272,10 +272,6 @@ class ConvLayer(LayerBase):
         x_str = x.reshape(x.shape[0], x.shape[1], -1)
         filter_str = out_grad.reshape(out_grad.shape[0], out_grad.shape[1], -1)
 
-        input_rows = x.shape[2]
-        input_cols = x.shape[3]
-        f_rows = out_grad.shape[2]
-        f_cols = out_grad.shape[3]
         out_rows = kernel_size
         out_cols = kernel_size
 

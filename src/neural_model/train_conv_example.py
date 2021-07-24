@@ -1,7 +1,7 @@
 import numpy as np
 
 from src.neural_model.activation_functions import ReLu, Softmax
-from src.neural_model.layer_classes import FullyConnectedLayer, ConvLayer, FlattenLayer, calculate_fc_after_conv_input
+from src.neural_model.layer_classes import FullyConnectedLayer, ConvLayer, FlattenLayer, calculate_fc_after_conv_input, get_conv_output_shape
 from src.neural_model.losses import NLLoss
 from src.neural_model.models import SequentialModel
 
@@ -18,14 +18,19 @@ def make_example_net():
     conv_channels = 16
     stride = 2
 
+
     loss = NLLoss()
     layers_list = list()
     layers_list += [
         ConvLayer(input_size[:2], in_channels=input_size[-1], out_channels=conv_channels, kernel_size=kernel_size,
                   stride=stride), ReLu()]
+    mid_size = get_conv_output_shape(input_size[:2], kernel_size, stride)
+    layers_list += [
+        ConvLayer(mid_size, in_channels=conv_channels, out_channels=conv_channels, kernel_size=kernel_size,
+                  stride=stride), ReLu()]
     layers_list += [FlattenLayer()]
 
-    fc_input_size = calculate_fc_after_conv_input(input_size[:2], conv_channels, kernel_size, stride)
+    fc_input_size = calculate_fc_after_conv_input(mid_size, conv_channels, kernel_size, stride)
     layers_list += [FullyConnectedLayer(fc_input_size, output_size), Softmax()]
 
     neural_network = SequentialModel(layers_list, loss=loss)
@@ -66,10 +71,10 @@ def main():
     # optimizer = ADAM(layers=model.layers_list, learning_rate=learning_rate, beta1=beta1, beta2=beta2, lam=lam)
     optimizer = SGD(layers=model.layers_list, learning_rate=learning_rate)
 
-    batch_size = 256
+    batch_size = 512
     epochs = 50  # Irrelevant to RL
     train_model(x_train, y_train, model=model, epochs=epochs, batch_size=batch_size, optimizer=optimizer,
-                do_grad_check=False, val_data=(x_test, y_test), clip_grad_bounds=[-1, 1])
+                do_grad_check=True, val_data=(x_test, y_test), clip_grad_bounds=[-1, 1])
 
 
 if __name__ == '__main__':

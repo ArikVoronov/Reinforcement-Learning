@@ -43,7 +43,7 @@ def grad_check(model, x_batch, y_batch):
      Used for debugging
     """
     delta = 1e-6
-    layer_index = 1
+    layer_index = 3
 
     layer = model.layers_list[layer_index]
     i = 1
