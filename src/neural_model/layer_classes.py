@@ -161,8 +161,7 @@ class ConvLayer(LayerBase):
         layer_input = ctx.get_saved_tensors()
         self.dw = self.dw_calc(layer_input, grad_output)
         self.db = np.sum(grad_output, axis=0, keepdims=True)
-        # dz = self.calculate_conv_gradient(layer_input, self.weights, self.conv_indices, grad_output)
-        dz = np.ones_like(layer_input)
+        dz = self.calculate_conv_gradient(layer_input, self.weights, self.conv_indices, grad_output)
         return dz
 
     def __str__(self):
