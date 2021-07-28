@@ -1,4 +1,5 @@
 import numpy as np
+from src.envs.env_utils import run_env
 
 
 class EvoAgent:
@@ -6,9 +7,9 @@ class EvoAgent:
         self.model = model
 
     def pick_action(self, state):
-        state = state.reshape(1,-1)
-        a = self.model(state)
-        action = np.argmax(a,axis=-1)
+        state = state.reshape(1, -1)
+        q = self.model(state)
+        action = np.argmax(q, axis=-1)
         return action
 
 
@@ -20,14 +21,7 @@ class EvoFitnessRL:
 
     def __call__(self, gen):
         self._agent.model.set_parameters(gen)
-        state = self._env.reset()
-        state = state.reshape(1,-1)
-        total_reward = 0
-        done = False
-        while not done:
-            action = self._agent.pick_action(state)
-            state, reward, done = self._env.step(action)
-            total_reward += reward
+        total_reward = run_env(self._env, self._agent.pick_action)
         return -total_reward
 
 

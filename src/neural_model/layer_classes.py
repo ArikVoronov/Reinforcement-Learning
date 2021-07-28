@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-
 import numpy as np
 from src.neural_model.nn_core import *
 
@@ -103,8 +102,8 @@ class FullyConnectedLayer(LayerBase):
         return dz
 
     def set_parameters(self, parameters_list):
-        self.weights = parameters_list[0]
-        self.bias = parameters_list[1]
+        self.weights = np.array(parameters_list[0])
+        self.bias = np.array(parameters_list[1])
 
     def get_parameters(self):
         return [self.weights, self.bias]
@@ -212,7 +211,7 @@ class ConvLayer(LayerBase):
         return conv_mat
 
     @staticmethod
-    def calculate_conv_gradient(z, f, ind_mat, dz_next):
+    def calculate_conv_gradient_old(z, f, ind_mat, dz_next):
         # f_shape [fh,fw,in_channels,out_filters ]
         z = np.rollaxis(np.rollaxis(z, 0, 4), 0, 3)
         dz_next = np.rollaxis(np.rollaxis(dz_next, 0, 4), 0, 3)

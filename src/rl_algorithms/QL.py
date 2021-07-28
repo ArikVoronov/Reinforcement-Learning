@@ -81,7 +81,7 @@ class CLF:
                         if episode_reward > max(self.episode_reward_list[-self.printout_episodes:]):
                             best_parameters = copy.deepcopy(self.q_approximator.get_parameters())
                             best_reward = episode_reward
-                            agent = NeuralNetworkAgent(apx=self.q_approximator)
+                            agent = NeuralNetworkAgent(model=self.q_approximator)
                             reward_total = run_env(env=self.env, agent=agent.pick_action)
                             # print(f'best reward {best_reward} actual total_reward {reward_total}')
                     self.episode_steps_list.append(episode_steps)
@@ -120,13 +120,13 @@ class CLF:
         samples = state.shape[0]
         # if samples < self.batch_size:
         #     print(f'skipping {samples}')
-            # return
+        # return
         self.optimizer.zero_grad()
         # Forward pass
         q_next = self.q_approximator(next_state)
         q_current = self.q_approximator(state)  # current after next to save forward context
         y = q_current.copy()
-        targets = reward + self.reward_discount * np.max(q_next, axis=-1,keepdims=True)
+        targets = reward + self.reward_discount * np.max(q_next, axis=-1, keepdims=True)
         for sample in range(samples):
             y[sample, action[sample]] = targets[sample]
 
@@ -142,10 +142,9 @@ class CLF:
         number_of_actions = q.shape[-1]
         if np.isnan(q).any():
             raise ValueError('q approximation is NaN')
-        q = q.squeeze()
-        best_action = np.argwhere(q == np.amax(q))  # This gives ALL indices where Q == max(Q)
+        best_action = np.argmax(q, axis=1)
         action_probabilities = np.ones(number_of_actions) * self.epsilon / number_of_actions
-        action_probabilities[best_action] += (1 - self.epsilon) / len(best_action)
+        action_probabilities[best_action] += 1 - self.epsilon
         return action_probabilities
 
     def pick_action(self, state):

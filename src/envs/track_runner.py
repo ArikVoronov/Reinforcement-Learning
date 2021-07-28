@@ -35,7 +35,7 @@ class TrackRunnerEnv(EnvBase):
     def reset(self):
         self.done = False
         self.steps = 0
-        starting_direction = self.track.starting_direction + 10 * 2 * (np.random.rand() - 0.5)
+        starting_direction = self.track.starting_direction
         self.player = Player(self.track.starting_position, starting_direction, self.track, self.run_velocity,
                              self.turn_degrees)
         self.player.sensor_readings_dict = self.player.get_sensor_readings()

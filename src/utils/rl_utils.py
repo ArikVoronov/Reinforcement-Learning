@@ -6,7 +6,6 @@ from sklearn.kernel_approximation import RBFSampler
 import src.regressors.linear_regressor as LinearReg
 
 
-
 def replicate_weights(clfs):
     wv0 = clfs[0].Qnet.wv.copy()
     bv0 = clfs[0].Qnet.bv.copy()
@@ -43,9 +42,11 @@ def nullify_qs(network, env):
     # set FIRST linear layer to be copies of the linreg parameters
     first_fc_layer_index = 1
     network.layers_list[first_fc_layer_index].weights = np.tile(w_new[:, None],
-                                                                network.layers_list[first_fc_layer_index].weights.shape[-1])
-    network.layers_list[first_fc_layer_index].bias = np.tile(b_new, network.layers_list[first_fc_layer_index].bias.shape[-1])[
-                                                  None, :]
+                                                                network.layers_list[first_fc_layer_index].weights.shape[
+                                                                    -1])
+    network.layers_list[first_fc_layer_index].bias = np.tile(b_new,
+                                                             network.layers_list[first_fc_layer_index].bias.shape[-1])[
+                                                     None, :]
     print('Initial Q values NULLIFIED')
 
 
@@ -96,14 +97,14 @@ def create_featurizer(env):
 
 
 class NeuralNetworkAgent:
-    def __init__(self, apx):
-        self.q_approximator = apx
+    def __init__(self, model):
+        self._model = model
 
     def load_weights(self, weights_file_path):
-        self.q_approximator.load_parameters_from_file(weights_file_path)
+        self._model.load_parameters_from_file(weights_file_path)
 
     def pick_action(self, state):
         state = state.reshape(1, -1)
-        q = self.q_approximator(state)
-        best_action = np.argwhere(q == np.amax(q))
-        return best_action[0][0]
+        q = self._model(state)
+        action = np.argmax(q, axis=-1)
+        return action

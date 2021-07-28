@@ -33,7 +33,6 @@ class GeneticOptimizer:
             fitness[i, 0] = fitness_function(generation[i])
         # Sort - HIGHEST fitness first
         ind = np.argsort(fitness, axis=0)[:self.survivor_count].squeeze()
-        # ind = np.flip(ind[-self.survivor_count:].squeeze())
         # Save fitness of the best survivors and calculate the change in fitness from the previous generation
         best_fit = fitness[ind[0], 0]
         best_genes = [generation[i] for i in ind]  # Surviving survivorCount specimens
@@ -139,8 +138,8 @@ class GeneticOptimizer:
         """
 
         if self.output_dir is not None:
-            FORMAT = "%Y_%m_%d-%H_%M"
-            ts = datetime.datetime.now().strftime(FORMAT)
+            time_string_format = "%Y_%m_%d-%H_%M"
+            ts = datetime.datetime.now().strftime(time_string_format)
             run_name = fitness_function.name + '_' + ts
             self.output_dir = os.path.join(self.output_dir, run_name)
             os.makedirs(self.output_dir, exist_ok=True)
@@ -155,22 +154,23 @@ class GeneticOptimizer:
         for itr in pbar:
             best_genes, best_fit = self.get_best_specimens(generation, fitness_function)
             generation = self.breed_new_generation(best_genes)
-
             pbar.desc = f'Best fitness: {best_fit:.2f}'
             self.best_survivor = generation[0]
             self.fitness_history.append(best_fit)
             self.best_survivor_history.append(self.best_survivor)
 
             if self.output_dir is not None:
-                fitness_str = str(f'{best_fit:.2f}'.replace('.', '_'))
-                agent_name = f'agent_parameters_{itr}_fitness_{fitness_str}.pkl'
-
-                full_output_path = os.path.join(self.output_dir, agent_name)
-                with open(full_output_path, 'wb') as file:
-                    pickle.dump(self.best_survivor, file)
+                self._save_model(itr, best_fit)
 
             if self.fitness_target is not None:
                 if best_fit < self.fitness_target:
                     print(f"breaking: current best fitness {best_fit} under target {self.fitness_target}")
                     break
         print('Last Iteration: {}, Best fitness: {}'.format(itr, best_fit))
+
+    def _save_model(self, itr, best_fit):
+        fitness_str = str(f'{best_fit:.2f}'.replace('.', '_'))
+        agent_name = f'agent_parameters_{itr}_fitness_{fitness_str}.pkl'
+        full_output_path = os.path.join(self.output_dir, agent_name)
+        with open(full_output_path, 'wb') as file:
+            pickle.dump(self.best_survivor, file)

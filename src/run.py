@@ -2,7 +2,7 @@ from src.evo.evo_utils import EvoFitnessRL
 from src.evo.genetic_algorithm import GeneticOptimizer
 from src.core.config import Config
 from src.rl_algorithms import QL
-from src.envs.env_utils import run_env_with_display
+from src.envs.env_utils import run_env_with_display,run_env
 from src.utils.rl_utils import NeuralNetworkAgent
 
 import src.envs as envs
@@ -39,7 +39,6 @@ def main(path_to_config):
 
     elif run_mode == 'train_rl':
         train_rl_config = config.train_rl
-        # train_rl_config.number_of_actions = env.number_of_actions
         algorithm_list = [
             QL.CLF(apx=model, env=env, **train_rl_config.to_dict())
         ]
@@ -50,9 +49,9 @@ def main(path_to_config):
 
     elif run_mode == 'run_env':
         run_env_config = config.run_env
-        agent = NeuralNetworkAgent(apx=model)
+        agent = NeuralNetworkAgent(model=model)
         agent.load_weights(run_env_config.agent_weights_file_path)
-        run_env_with_display(runs=1, env=env, agent=agent.pick_action, frame_rate=20)
+        run_env_with_display(runs=1, env=env, agent=agent.pick_action, frame_rate=run_env_config.frame_rate)
     else:
         raise Exception(f'Config run mode {run_mode} unrecognized')
 
