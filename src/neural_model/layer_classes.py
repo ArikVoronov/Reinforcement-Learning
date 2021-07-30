@@ -150,7 +150,7 @@ class ConvLayer(LayerBase):
             self.conv_indices = get_convolution_vector_indices(layer_input.shape[2:],
                                                                (self.kernel_size, self.kernel_size),
                                                                self.stride)
-        z = self._conv3d(layer_input, self.weights, self.stride, self.conv_indices)
+        z = self._conv3d(layer_input, self.weights, self.out_dims, self.conv_indices)
         # z_exp = self._conv3d_explicit(layer_input, self.weights, self.stride, self.conv_indices)
         layer_output = z + self.bias
         ctx.save_for_backward(layer_input)
@@ -168,41 +168,19 @@ class ConvLayer(LayerBase):
         return f'{self.__class__.__name__} - size ({self.out_channels},{self.in_channels},{self.kernel_size},{self.kernel_size})- total parameters {parameter_count}'
 
     @staticmethod
-    def _conv3d_explicit(x, conv_filter, stride, conv_indices):
-        samples = x.shape[0]
-        out_channels = conv_filter.shape[0]
-        f_rows = conv_filter.shape[2]
-        f_cols = conv_filter.shape[3]
-        out_rows, out_cols = get_conv_output_shape(x.shape[2:], conv_filter.shape[2:], stride)
-
-        conv_mat = np.empty((samples, out_channels, out_rows, out_cols))
-        conv_mat[:] = np.nan
-        for sample in range(samples):
-            x_sample = x[sample]
-            for filter_channel in range(out_channels):
-                filter_kernel = conv_filter[filter_channel]
-                for row in range(out_rows):
-                    for col in range(out_cols):
-                        conv_res = x_sample[:, row:(row + f_rows), col:(col + f_cols)]
-                        conv_mat[sample, filter_channel, row, col] = np.sum(conv_res * filter_kernel)
-        return conv_mat
-
-    @staticmethod
-    def _conv3d(x, conv_filter, stride, conv_indices):
-        if conv_filter.shape[1] != x.shape[1]:
+    def _conv3d(conv_input, conv_filter, out_shape, conv_indices, ):
+        if conv_filter.shape[1] != conv_input.shape[1]:
             raise Exception('Inconsistent depths for filter and input')
         # x[samples,channels,x,y]
         # f[out_channels,in_channels,x,y]
-        samples = x.shape[0]
+        samples = conv_input.shape[0]
         out_channels = conv_filter.shape[0]
+        out_rows, out_cols = out_shape
 
-        x_str = x.reshape(x.shape[0], x.shape[1], -1)
+        x_str = conv_input.reshape(conv_input.shape[0], conv_input.shape[1], -1)
         filter_str = conv_filter.reshape(conv_filter.shape[0], conv_filter.shape[1], -1)
 
-        out_rows, out_cols = get_conv_output_shape(x.shape[2:], conv_filter.shape[2], stride)
-
         xb = x_str[:, :, conv_indices]
-
         xc = xb.swapaxes(2, 1)
         xc = xc.reshape(xc.shape[0], xc.shape[1], xc.shape[2] * xc.shape[3])
         fc = filter_str.reshape(filter_str.shape[0], -1)
@@ -210,8 +188,20 @@ class ConvLayer(LayerBase):
         conv_mat = conv_mat.reshape(samples, out_channels, out_rows, out_cols)
         return conv_mat
 
+    def dw_calc(self, layer_input, grad_output):
+        if self.dw_conv_indices is None:
+            self.dw_conv_indices = get_convolution_vector_indices(layer_input.shape[2:],
+                                                                  (self.kernel_size, self.kernel_size),
+                                                                  self.stride).T
+        dw = self._conv3d(layer_input.swapaxes(0, 1),
+                          grad_output.swapaxes(0, 1),
+                          out_shape=(self.kernel_size, self.kernel_size),
+                          conv_indices=self.dw_conv_indices)
+        dw = dw.swapaxes(0, 1)
+        return dw
+
     @staticmethod
-    def calculate_conv_gradient_old(z, f, ind_mat, dz_next):
+    def calculate_conv_gradient(z, f, ind_mat, dz_next):
         # f_shape [fh,fw,in_channels,out_filters ]
         z = np.rollaxis(np.rollaxis(z, 0, 4), 0, 3)
         dz_next = np.rollaxis(np.rollaxis(dz_next, 0, 4), 0, 3)
@@ -250,68 +240,25 @@ class ConvLayer(LayerBase):
         dz = np.rollaxis(np.rollaxis(dz, 3, 0), 3, 1)
         return dz
 
-    def dw_calc(self, layer_input, grad_output):
-        if self.dw_conv_indices is None:
-            self.dw_conv_indices = get_convolution_vector_indices(layer_input.shape[2:],
-                                                                  (self.kernel_size, self.kernel_size),
-                                                                  self.stride).T
-        dw = self.dw_conv(layer_input.swapaxes(0, 1), grad_output.swapaxes(0, 1), self.kernel_size,
-                          self.dw_conv_indices)
-        return dw
+    @staticmethod
+    def _conv3d_explicit(x, conv_filter, stride, conv_indices):
+        samples = x.shape[0]
+        out_channels = conv_filter.shape[0]
+        f_rows = conv_filter.shape[2]
+        f_cols = conv_filter.shape[3]
+        out_rows, out_cols = get_conv_output_shape(x.shape[2:], conv_filter.shape[2:], stride)
 
-    def dw_conv(self, x, out_grad, kernel_size, conv_indices):
-        if out_grad.shape[1] != x.shape[1]:
-            raise Exception('Inconsistent depths for filter and input')
-        # x[samples,channels,x,y]
-        # f[out_channels,in_channels,x,y]
-        in_channels = x.shape[0]
-        out_channels = out_grad.shape[0]
-
-        x_str = x.reshape(x.shape[0], x.shape[1], -1)
-        filter_str = out_grad.reshape(out_grad.shape[0], out_grad.shape[1], -1)
-
-        out_rows = kernel_size
-        out_cols = kernel_size
-
-        xb = x_str[:, :, conv_indices]
-
-        xc = xb.swapaxes(2, 1)
-        xc = xc.reshape(xc.shape[0], xc.shape[1], xc.shape[2] * xc.shape[3])
-        fc = filter_str.reshape(filter_str.shape[0], -1)
-        conv_mat = np.dot(xc, fc.T).swapaxes(1, 2)
-        conv_mat = conv_mat.reshape(in_channels, out_channels, out_rows, out_cols)
-
-        conv_mat = conv_mat.swapaxes(0, 1)
+        conv_mat = np.empty((samples, out_channels, out_rows, out_cols))
+        conv_mat[:] = np.nan
+        for sample in range(samples):
+            x_sample = x[sample]
+            for filter_channel in range(out_channels):
+                filter_kernel = conv_filter[filter_channel]
+                for row in range(out_rows):
+                    for col in range(out_cols):
+                        conv_res = x_sample[:, row:(row + f_rows), col:(col + f_cols)]
+                        conv_mat[sample, filter_channel, row, col] = np.sum(conv_res * filter_kernel)
         return conv_mat
-
-    # def dw_conv_indices(self, layer_input, filter_shape, stride):
-    #     # filter_parameters [fh,fw,stride]
-    #
-    #     input_rows = layer_input.shape[2]
-    #     input_cols = layer_input.shape[3]
-    #
-    #     f_rows, f_cols = filter_shape
-    #
-    #     out_rows = int(np.floor((input_rows - f_rows) / stride + 1))
-    #     out_cols = int(np.floor((input_cols - f_cols) / stride + 1))
-    #
-    #     # The indexes for the first filter (top left of matrix)
-    #     ind_base = np.tile(np.arange(0, f_cols) * self.stride, (f_rows, 1))
-    #     ind_base += input_cols * (np.arange(0, f_rows) * self.stride).reshape(f_rows, 1)
-    #     ind_base = ind_base.reshape(1, -1)
-    #
-    #     # Tile the base indexes to rows and columns, representing the movement of the convolution
-    #     ind_tile = np.tile(ind_base, (out_cols, 1))
-    #     ind_tile += np.arange(0, ind_tile.shape[0]).reshape(ind_tile.shape[0], 1)
-    #     ind_tile = np.tile(ind_tile, (out_rows, 1))
-    #
-    #     rower = input_cols * (np.floor(np.arange(ind_tile.shape[0]) / ind_tile.shape[0] * out_rows)).reshape(
-    #         ind_tile.shape[0],
-    #         1)
-    #
-    #     ind_mat = (ind_tile + rower.astype(int))
-    #
-    #     return ind_mat
 
 
 class MaxPoolLayer(LayerBase):
