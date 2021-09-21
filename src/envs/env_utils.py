@@ -101,6 +101,12 @@ class CoordinateTransformer:
         self._display_width = display_width
         self._display_height = display_height
 
+    def get_screen_width(self, width):
+        return int(width * self._display_width)
+
+    def get_screen_height(self, height):
+        return int(height * self._display_height)
+
     def cartesian_to_screen(self, point):
         # Translate cartesian normalized coordinates to pygame screen coordinates
         x = int(point[0] * self._display_width)
