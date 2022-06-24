@@ -37,7 +37,7 @@ def run_env(env, agent):
     return reward_total
 
 
-def run_env_with_display(runs, env, agent, frame_rate=25, display_size=(800, 600)):
+def run_env_with_display(env, agent, runs=1, frame_rate=60, display_size=(800, 600)):
     """
     Accepts any tailored environment object and
     runs multiple sequences of steps until done,

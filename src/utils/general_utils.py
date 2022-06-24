@@ -1,4 +1,4 @@
-import gym
+# import gym
 
 from src.neural_model.activation_functions import ReLu2, LinearActivation
 from src.neural_model.layer_classes import FullyConnectedLayer

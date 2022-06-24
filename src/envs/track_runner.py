@@ -72,7 +72,7 @@ class TrackRunnerEnv(EnvBase):
         if self.coordinate_transformer is None:
             self.coordinate_transformer = CoordinateTransformer(game_display)
 
-        game_display.fill(COLORS_DICT['black'])
+        game_display.fill(ColorClass.black)
         self.track.render(game_display)
         self.player.render(game_display)
         # Sensed points
@@ -80,7 +80,7 @@ class TrackRunnerEnv(EnvBase):
             for sensor_readings in self.player.sensor_readings_dict.values():
                 sensor_position = sensor_readings['position']
                 if sensor_position is not None:
-                    pygame.draw.circle(game_display, COLORS_DICT['gray'],
+                    pygame.draw.circle(game_display, ColorClass.gray,
                                        self.coordinate_transformer.cartesian_to_screen(sensor_position), 5)
 
 
@@ -186,11 +186,11 @@ class Player:
             self.coordinate_transformer = CoordinateTransformer(game_display)
         transform = self.coordinate_transformer.cartesian_to_screen
 
-        pygame.draw.circle(game_display, COLORS_DICT['red'],
+        pygame.draw.circle(game_display, ColorClass.red,
                            transform(self.position + 0.01 * np.array(
                                [np.cos(self.direction * np.pi / 180), np.sin(self.direction * np.pi / 180)])),
                            3)
-        pygame.draw.circle(game_display, COLORS_DICT['green'], transform(self.position), 5)
+        pygame.draw.circle(game_display, ColorClass.green, transform(self.position), 5)
 
 
 def get_line_parameters(pos, angle):
@@ -242,13 +242,13 @@ def dist_to_line(point, m, n):
 
 
 def run_example():
-    track = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\src\Envs\Tracks\tracky.pkl'
-    run_velocity = 0.015
-    turn_degrees = 15
+    track = r'.\Tracks\tracky.pkl'
+    run_velocity = 0.005
+    turn_degrees = 0.5
     human_player = HumanController()
     agent = human_player.pick_action
     env = TrackRunnerEnv(run_velocity, turn_degrees, track)
-    run_env_with_display(runs=2, env=env, agent=agent, frame_rate=10)
+    run_env_with_display(env=env, agent=agent)
 
 
 if __name__ == "__main__":

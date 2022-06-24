@@ -51,11 +51,11 @@ def main(path_to_config):
         run_env_config = config.run_env
         agent = NeuralNetworkAgent(model=model)
         agent.load_weights(run_env_config.agent_weights_file_path)
-        run_env_with_display(runs=1, env=env, agent=agent.pick_action, frame_rate=run_env_config.frame_rate)
+        run_env_with_display(env=env, agent=agent.pick_action, frame_rate=run_env_config.frame_rate)
     else:
         raise Exception(f'Config run mode {run_mode} unrecognized')
 
 
 if __name__ == '__main__':
-    config_path = r'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\configs\config.yaml'
+    config_path = r'.\configs\config.yaml'
     main(config_path)

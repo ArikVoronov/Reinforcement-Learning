@@ -1,4 +1,4 @@
-run_mode: 'train_rl' #train_evo / train_rl / run_env
+run_mode: 'run_env' #train_evo / train_rl / run_env
 
 general:
   seed: 46
@@ -13,7 +13,7 @@ env:
   parameters:
     run_velocity: 0.015
     turn_degrees: 15
-    track: 'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\src\Envs\Tracks\tracky.pkl'
+    track: '.\src\Envs\Tracks\tracky.pkl'
     max_steps: 250
 
 model:
@@ -27,7 +27,7 @@ train_evo:
   mutation_rate: 0.0001
   generation_method: "Random Splice"
   fitness_target: -50
-  output_dir: 'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\evo_agents'
+  output_dir: '.\output\evo_agents'
 
 train_rl:
   reward_discount: 0.95
@@ -37,8 +37,8 @@ train_rl:
   max_episodes: 10000
   model_learning_rate: 0.001
   printout_episodes: 50
-  output_dir_path: 'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\rl_agents'
+  output_dir_path: '.\output\rl_agents'
 
 run_env:
-  agent_weights_file_path: 'F:\My Documents\Study\Programming\PycharmProjects\Reinforcement-Learning\output\rl_agents\TrackRunnerEnv_2021_07_27-02_12\agent_parameters_4250_fitness_1_00.pkl'
+  agent_weights_file_path: '.\output\rl_agents\TrackRunnerEnv_2021_07_27-02_12\agent_parameters_4250_fitness_1_00.pkl'
   frame_rate: 5

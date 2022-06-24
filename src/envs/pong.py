@@ -30,12 +30,14 @@ class PongEnv(EnvBase):
         self.deltaScore = np.array([0, 0])
         self.max_steps = max_steps
 
+        self.steps = 0
         self.games = 0
         self.reset_game()
         self.reset()
 
     def reset(self):
         self.games = 0
+        self.steps = 0
         self.done = False
         self.reset_game()
         return self.state
@@ -85,8 +87,8 @@ class PongEnv(EnvBase):
         for pad in self.paddles:
             state += [pad.position[1]]
         state += list(self.ball.position)
-        state += list(self.ball.vel)
-        state += [self.ball.vel[1] / self.ball.vel[0]]
+        state += list(self.ball.velocity)
+        state += [self.ball.velocity[1] / self.ball.velocity[0]]
         state = np.array(state)
         return state
 
@@ -110,24 +112,24 @@ class PongEnv(EnvBase):
 
         c2s = self.coordinate_transformer.cartesian_to_screen
 
-        game_display.fill(COLORS_DICT['black'])
+        game_display.fill(ColorClass.black)
         # Walls
-        pygame.draw.line(game_display, COLORS_DICT['white'], c2s((0, self.wall_y)), c2s((1, self.wall_y)), 2)
-        pygame.draw.line(game_display, COLORS_DICT['white'], c2s((0, 1 - self.wall_y)), c2s((1, 1 - self.wall_y)), 2)
+        pygame.draw.line(game_display, ColorClass.white, c2s((0, self.wall_y)), c2s((1, self.wall_y)), 2)
+        pygame.draw.line(game_display, ColorClass.white, c2s((0, 1 - self.wall_y)), c2s((1, 1 - self.wall_y)), 2)
         # Score
-        s_string = my_font.render(str(self.score[0]), False, COLORS_DICT['white'])
+        s_string = my_font.render(str(self.score[0]), False, ColorClass.white)
         game_display.blit(s_string, (10, 10))
-        s_string = my_font.render(str(self.score[1]), False, COLORS_DICT['white'])
+        s_string = my_font.render(str(self.score[1]), False, ColorClass.white)
         game_display.blit(s_string, (display_width - 50, 10))
         # Paddles
         for pad in self.paddles:
-            pygame.draw.line(game_display, COLORS_DICT['white'],
+            pygame.draw.line(game_display, ColorClass.white,
                              c2s((pad.position[0], pad.position[1] - pad.width / 2)),
                              c2s((pad.position[0], pad.position[1] + pad.width / 2)), 5)
         # Ball
-        pygame.draw.circle(game_display, COLORS_DICT['dark_red'], c2s((self.ball.position[0], self.ball.position[1])),
+        pygame.draw.circle(game_display, ColorClass.dark_red, c2s((self.ball.position[0], self.ball.position[1])),
                            6)
-        pygame.draw.circle(game_display, COLORS_DICT['red'], c2s((self.ball.position[0], self.ball.position[1])), 4)
+        pygame.draw.circle(game_display, ColorClass.red, c2s((self.ball.position[0], self.ball.position[1])), 4)
         pygame.display.update()
 
 
@@ -156,7 +158,7 @@ class BallClass:
 
         self.deflect = False
         self.position = np.array([0.50, 0.50])
-        self.vel = self.initiate_velocity()
+        self.velocity = self.initiate_velocity()
         self.deflect = False
         self.goal = False
         self.angle = 0
@@ -165,14 +167,14 @@ class BallClass:
 
     def reset(self):
         self.position = np.array([0.50, 0.50])
-        self.vel = self.initiate_velocity()
+        self.velocity = self.initiate_velocity()
         self.deflect = False
         self.goal = False
 
     def pad_collision(self, pad):
         # Check for collision with a pad
         if np.abs(self.position[1] - pad.position[1]) < (pad.width / 2):
-            if np.abs(self.position[0] - pad.position[0]) < np.abs(self.vel[0]):
+            if np.abs(self.position[0] - pad.position[0]) < np.abs(self.velocity[0]):
                 self.position[0] = pad.position[0]
                 self.deflect = True
 
@@ -184,7 +186,7 @@ class BallClass:
             self.position[1] = (1 - self.wall_y)
         else:
             return
-        self.vel[1] = -self.vel[1]
+        self.velocity[1] = -self.velocity[1]
 
     def goal_check(self):
         # Check if a goal is scored
@@ -205,16 +207,16 @@ class BallClass:
     def update(self, paddles):
         # Ball updates every frame
         self.deflect = False
-        self.position += self.vel
+        self.position += self.velocity
         self.wall_collision()
         self.goal_check()
         for pad in paddles:
             self.pad_collision(pad)
             if self.deflect:
                 self.angle = float((self.position[1] - pad.position[1]) / (pad.width / 2) * self.maxAngle)
-                self.vel[0] = self.speed * (np.cos(self.angle)) * float(-np.sign(self.vel[0]))
-                self.vel[1] = self.speed * (np.sin(self.angle))
-                self.position[0] += self.vel[0] * 2
+                self.velocity[0] = self.speed * (np.cos(self.angle)) * float(-np.sign(self.velocity[0]))
+                self.velocity[1] = self.speed * (np.sin(self.angle))
+                self.position[0] += self.velocity[0] * 2
                 break
 
 
@@ -239,7 +241,7 @@ class AIController:
     def pick_action(self, state=None):
         destination = self.ball.position[1]
         if self.return_to_center:
-            if self.side * self.ball.vel[0] < 0:
+            if self.side * self.ball.velocity[0] < 0:
                 destination = 0.5
         distance = (destination - self.paddle.position[1])
         if abs(distance) >= self.paddle.width / 4:
@@ -272,7 +274,7 @@ class AIControllerTrajectory:
         self.action = None
 
     def calc_trajectory(self):
-        y = self.ball.position[1] + self.ball.vel[1] / self.ball.vel[0] * (
+        y = self.ball.position[1] + self.ball.velocity[1] / self.ball.velocity[0] * (
                 1 - self.ball.position[0] - (1 - self.paddle.position[0]))
         field_height = 1 - self.wall_y * 2
         delta = (y - self.wall_y) % field_height
@@ -286,7 +288,7 @@ class AIControllerTrajectory:
 
     def pick_action(self):
         destination = 0.5
-        if self.side * self.ball.vel[0] > 0:
+        if self.side * self.ball.velocity[0] > 0:
             destination = self.calc_trajectory()
         distance = (destination - self.paddle.position[1])
         if abs(distance) >= self.paddle.width / 4:
@@ -304,7 +306,7 @@ def run_example():
     key_map = {'K_UP': 1, 'K_DOWN': 2}
     human_player = HumanController(key_map=key_map)
     agent = human_player.pick_action
-    run_env_with_display(runs=1, env=env, agent=agent)
+    run_env_with_display(env=env, agent=agent)
 
 
 if __name__ == "__main__":

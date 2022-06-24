@@ -87,11 +87,11 @@ class Track:
 
             for loop in range(self._loop_count):
                 for vertex in self.vertex_lists[loop]:
-                    pygame.draw.circle(game_display, COLORS_DICT['blue'],
+                    pygame.draw.circle(game_display, ColorClass.blue,
                                        self.coordinate_transformer.cartesian_to_screen(vertex.position),
                                        6)
                 for line in self.line_lists[loop]:
-                    pygame.draw.line(game_display, COLORS_DICT['blue'],
+                    pygame.draw.line(game_display, ColorClass.blue,
                                      self.coordinate_transformer.cartesian_to_screen(line.v1.position),
                                      self.coordinate_transformer.cartesian_to_screen(line.v2.position), 4)
 
@@ -139,7 +139,7 @@ class StartingPoint:
             if mouse[0]:
                 self.pos = self.coordinate_transformer.screen_to_cartesian(pygame.mouse.get_pos())
         else:
-            pygame.draw.circle(game_display, COLORS_DICT['green'],
+            pygame.draw.circle(game_display, ColorClass.green,
                                self.coordinate_transformer.cartesian_to_screen(self.pos), 6)
             if mouse[0]:
                 p = self.coordinate_transformer.screen_to_cartesian(pygame.mouse.get_pos())
@@ -149,10 +149,10 @@ class StartingPoint:
         if self.coordinate_transformer is None:
             self.coordinate_transformer = CoordinateTransformer(game_display)
         if self.dir is not None:
-            pygame.draw.circle(game_display, COLORS_DICT['red'], self.coordinate_transformer.cartesian_to_screen(
+            pygame.draw.circle(game_display, ColorClass.red, self.coordinate_transformer.cartesian_to_screen(
                 self.pos + 0.01 * np.array([np.cos(self.dir * np.pi / 180), np.sin(self.dir * np.pi / 180)])), 4)
         if self.pos is not None:
-            pygame.draw.circle(game_display, COLORS_DICT['green'],
+            pygame.draw.circle(game_display, ColorClass.green,
                                self.coordinate_transformer.cartesian_to_screen(self.pos), 6)
 
 

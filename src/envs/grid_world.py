@@ -146,7 +146,7 @@ class GridWorldEnv(EnvBase):
         if self.coordinate_transformer is None:
             self.coordinate_transformer = CoordinateTransformer(game_display)
 
-        game_display.fill(COLORS_DICT['white'])
+        game_display.fill(ColorClass.white)
 
         my_font = pygame.font.SysFont('Comic Sans MS', 32)
         dx, dy = self.coordinate_transformer.cartesian_to_screen((1 / self.cols, 1 - 1 / self.rows))
@@ -157,23 +157,23 @@ class GridWorldEnv(EnvBase):
                 # Fill player, goal and walls
                 if current_cell.player_here:
                     pygame.draw.rect(game_display, (255, 0, 0), [j * dx, i * dy, dx, dy])
-                    s_string = my_font.render('P', False, COLORS_DICT['black'])
+                    s_string = my_font.render('P', False, ColorClass.black)
                     game_display.blit(s_string, ((j + 0.3) * dx, (i + 0.1) * dy))
                 elif current_cell.goalHere:
                     pygame.draw.rect(game_display, (0, 255, 0), [j * dx, i * dy, dx, dy])
-                    s_string = my_font.render('G', False, COLORS_DICT['black'])
+                    s_string = my_font.render('G', False, ColorClass.black)
                     game_display.blit(s_string, ((j + 0.3) * dx, (i + 0.1) * dy))
                 elif current_cell.wall:
                     pygame.draw.rect(game_display, (0, 0, 255), [j * dx, i * dy, dx, dy])
                 else:
-                    pygame.draw.rect(game_display, COLORS_DICT['black'], [j * dx, i * dy, dx, dy], width=1)
+                    pygame.draw.rect(game_display, ColorClass.black, [j * dx, i * dy, dx, dy], width=1)
                 # Draw values
                 if self.draw_q_on_render and self.Q is not None:
                     # a - 0:up ; 1:right ; 2:down ; 3:left
                     q_values = np.array(self.Q[current_cell.state]) - np.min(self.Q[current_cell.state])
                     q_values = q_values / (np.sum(q_values) + 1e-20)
-                    color_list = [COLORS_DICT['black'], COLORS_DICT['black'], COLORS_DICT['black'],
-                                  COLORS_DICT['black']]
+                    color_list = [ColorClass.black, ColorClass.black, ColorClass.black,
+                                  ColorClass.black]
                     color_list[np.argmax(q_values)] = (0, 255, 0)
                     cell_center = ((j + 0.5) * dx, (i + 0.5) * dy)
                     pygame.draw.line(game_display, color_list[0], (cell_center[0], cell_center[1]),
@@ -186,9 +186,9 @@ class GridWorldEnv(EnvBase):
                                      (cell_center[0] - 0.3 * dx * q_values[3], cell_center[1]), 2)  # Left
         # Draw grid
         for i in range(1, self.rows):
-            pygame.draw.line(game_display, COLORS_DICT['black'], (0, i * dy), (1, i * dy), 2)
+            pygame.draw.line(game_display, ColorClass.black, (0, i * dy), (1, i * dy), 2)
         for j in range(1, self.cols):
-            pygame.draw.line(game_display, COLORS_DICT['black'], (j * dx, 0), (j * dx, 1), 2)
+            pygame.draw.line(game_display, ColorClass.black, (j * dx, 0), (j * dx, 1), 2)
 
 
 def run_example():
@@ -200,7 +200,7 @@ def run_example():
     agent = human_player.pick_action
 
     # Example run
-    run_env_with_display(runs=1, env=env, agent=agent, frame_rate=25)
+    run_env_with_display(env=env, agent=agent)
 
 
 if __name__ == "__main__":
