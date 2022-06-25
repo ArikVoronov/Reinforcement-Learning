@@ -2,8 +2,9 @@ from src.evo.evo_utils import EvoFitnessRL
 from src.evo.genetic_algorithm import GeneticOptimizer
 from src.core.config import Config
 from src.rl_algorithms import QL
-from src.envs.env_utils import run_env_with_display,run_env
+from src.envs.env_utils import run_env_with_display, run_env
 from src.utils.rl_utils import NeuralNetworkAgent
+from src.rl_trainer import RLTrainer
 
 import src.envs as envs
 import numpy as np
@@ -40,12 +41,13 @@ def main(path_to_config):
     elif run_mode == 'train_rl':
         train_rl_config = config.train_rl
         algorithm_list = [
-            QL.CLF(apx=model, env=env, **train_rl_config.to_dict())
+            QL.AlgorithmQL(apx=model, env=env, **train_rl_config.rl_parameters.to_dict())
         ]
         print('\nTraining RL algorithms')
         for i in range(len(algorithm_list)):
             print('\nTraining algorithms #', i + 1)
-            algorithm_list[i].train(check_grad=False)
+            trainer = RLTrainer(rl_algorithm=algorithm_list[i], env=env, **train_rl_config.trainer_parameters.to_dict())
+            trainer.train()
 
     elif run_mode == 'run_env':
         run_env_config = config.run_env

@@ -1,20 +1,20 @@
-run_mode: 'run_env' #train_evo / train_rl / run_env
+run_mode: 'train_rl' #train_evo / train_rl / run_env
 
 general:
   seed: 46
 
 env:
-#  name: 'GridWorldEnv'
-#  parameters:
-#    rows: 4
-#    cols: 4
-#    max_steps: 100
-  name: 'TrackRunnerEnv'
+  name: 'GridWorldEnv'
   parameters:
-    run_velocity: 0.015
-    turn_degrees: 15
-    track: '.\src\Envs\Tracks\tracky.pkl'
-    max_steps: 250
+    rows: 4
+    cols: 4
+    max_steps: 200
+#  name: 'TrackRunnerEnv'
+#  parameters:
+#    run_velocity: 0.015
+#    turn_degrees: 15
+#    track: '.\src\Envs\Tracks\tracky.pkl'
+#    max_steps: 250
 
 model:
   hidden_layers_dims: [ 50 ,20]
@@ -30,14 +30,16 @@ train_evo:
   output_dir: '.\output\evo_agents'
 
 train_rl:
-  reward_discount: 0.95
-  epsilon: 0.0
-  epsilon_decay: 0.95
-  batch_size: 16
-  max_episodes: 10000
-  model_learning_rate: 0.001
-  printout_episodes: 50
-  output_dir_path: '.\output\rl_agents'
+  rl_parameters:
+    reward_discount: 0.95
+    epsilon: 0.1
+    epsilon_decay: 0.95
+    model_learning_rate: 0.001
+  trainer_parameters:
+    batch_size: 256
+    max_episodes: 10000
+    printout_episodes: 50
+    output_dir_path: '.\output\rl_agents'
 
 run_env:
   agent_weights_file_path: '.\output\rl_agents\TrackRunnerEnv_2021_07_27-02_12\agent_parameters_4250_fitness_1_00.pkl'

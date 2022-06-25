@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from collections import namedtuple, deque
 from itertools import count
 from PIL import Image
+from copy import deepcopy
 
 import torch
 import torch.nn as nn
@@ -28,7 +29,7 @@ torch.manual_seed(42)
 np.random.seed(42)
 
 # if gpu is to be used
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
 
@@ -171,10 +172,13 @@ class CartEnv:
 
 
 class DQN:
-    def __init__(self, policy_net, target_net, model_lr, env, max_episodes, batch_size):
+    def __init__(self, policy_net, model_lr, env, max_episodes, batch_size):
         self.env = env
         self.policy_net = policy_net
-        self.target_net = target_net
+        self.target_net = deepcopy(self.policy_net)
+        self.target_net.load_state_dict(policy_net.state_dict())
+        self.target_net.eval()
+
         self.optimizer = optim.RMSprop(policy_net.parameters(), lr=model_lr)
         self.memory = ReplayMemory(10000)
         self.steps_done = 0
@@ -222,6 +226,7 @@ class DQN:
                     episode_durations.append(t + 1)
                     # plot_durations()
                     break
+
             # Update the target network, copying all weights and biases in DQN
             pbar.desc = f"epoch {i_episode}, total reward {np.mean(total_reward[-10:]):.3f}, eps {self.eps_threshold:.3f}"
             if i_episode % TARGET_UPDATE == 0:
@@ -292,16 +297,13 @@ def main():
     if mode == 'conv':
         env = CartEnv(state_as_image_difference=True)
         policy_net = ConvModel(env.screen_height, env.screen_width, env.number_of_actions).to(device)
-        target_net = ConvModel(env.screen_height, env.screen_width, env.number_of_actions).to(device)
     elif mode == 'fc':
         env = CartEnv(state_as_image_difference=False)
         policy_net = FCModel(env.state_vector_dimension, env.number_of_actions, hidden_size=200).to(device)
-        target_net = FCModel(env.state_vector_dimension, env.number_of_actions, hidden_size=200).to(device)
     else:
         raise Exception()
-    target_net.load_state_dict(policy_net.state_dict())
-    target_net.eval()
-    dqn = DQN( policy_net, target_net, env=env,model_lr=MODEL_LR, max_episodes=NUM_EPISODES, batch_size=BATCH_SIZE)
+
+    dqn = DQN(policy_net, env=env, model_lr=MODEL_LR, max_episodes=NUM_EPISODES, batch_size=BATCH_SIZE)
     dqn.train()
 
 
