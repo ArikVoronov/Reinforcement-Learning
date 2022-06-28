@@ -2,7 +2,7 @@ import numpy as np
 import sklearn.pipeline
 import sklearn.preprocessing
 from sklearn.kernel_approximation import RBFSampler
-
+import torch
 import src.regressors.linear_regressor as LinearReg
 
 
@@ -101,10 +101,11 @@ class NeuralNetworkAgent:
         self._model = model
 
     def load_weights(self, weights_file_path):
-        self._model.load_parameters_from_file(weights_file_path)
+        state_dict = torch.load(weights_file_path)
+        self._model.load_state_dict(state_dict)
 
     def pick_action(self, state):
         state = state.reshape(1, -1)
         q = self._model(state)
-        action = np.argmax(q, axis=-1)
+        action = torch.argmax(q, dim=-1)
         return action

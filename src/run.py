@@ -1,22 +1,24 @@
+import numpy as np
+from copy import deepcopy
+
+import torch
+
 from src.evo.evo_utils import EvoFitnessRL
 from src.evo.genetic_algorithm import GeneticOptimizer
 from src.core.config import Config
 from src.rl_algorithms import QL
-from src.envs.env_utils import run_env_with_display, run_env
+from src.envs.env_utils import run_env_with_display
 from src.utils.rl_utils import NeuralNetworkAgent
 from src.rl_trainer import RLTrainer
-
+from src.utils.general_utils import setup_my_fc_model, TorchFCModel
 import src.envs as envs
-import numpy as np
-
-from src.utils.general_utils import setup_fc_model
-from src.utils.rl_utils import nullify_qs
 
 
 def main(path_to_config):
     config = Config.load_from_yaml(path_to_config)
 
     np.random.seed(config.general.seed)
+    torch.manual_seed(config.general.seed)
 
     # Build env
     env_config = config.env
@@ -25,10 +27,9 @@ def main(path_to_config):
 
     # Create model
     model_config = config.model
-    model = setup_fc_model(input_size=env.state_vector_dimension, output_size=env.number_of_actions,
-                           **model_config.to_dict())
-    if model_config.save_file is None:
-        nullify_qs(model, env)
+    model = TorchFCModel(input_size=env.state_vector_dimension, output_size=env.number_of_actions,
+                         hidden_size_list=model_config.hidden_layers_dims)
+    model = model.to(model.device)
 
     # Run
     run_mode = config.run_mode
@@ -41,7 +42,7 @@ def main(path_to_config):
     elif run_mode == 'train_rl':
         train_rl_config = config.train_rl
         algorithm_list = [
-            QL.AlgorithmQL(apx=model, env=env, **train_rl_config.rl_parameters.to_dict())
+            QL.AlgorithmQL(apx=deepcopy(model), env=env, **train_rl_config.rl_parameters.to_dict())
         ]
         print('\nTraining RL algorithms')
         for i in range(len(algorithm_list)):

@@ -86,16 +86,29 @@ class Course:
 
 
 class MountainCarEnv(EnvBase):
-    def __init__(self, course, mass, friction_coef, thrust):
+    def __init__(self, mass, friction_coef, thrust, course=None, max_steps=1000):
         super().__init__()
-        self.nA = 2
-        self.nS = 3
-        self.course = course
-        self.car = Car(course.starting_pos, mass, friction_coef, thrust, course)
+        self.max_steps = max_steps
+        self.number_of_actions = 2
+        self.state_vector_dimension = 3
+        if course is not None:
+            self.course = course
+        else:
+            self.course = self._default_course()
+        self.car = Car(self.course.starting_pos, mass, friction_coef, thrust, self.course)
 
         self.car.reset(self.course.starting_pos)
         self.steps = 0
         self.reset()
+
+    def _default_course(self):
+        a = 3
+        course_function = lambda x: 0.1 + a * (x - 0.5) ** 2
+        course_derivative = lambda x: a * 2 * (x - 0.5)
+        d2 = lambda x: a * 2
+        starting_pos = [0.5, 0.1]
+        course = Course(starting_pos, course_function, derivative=course_derivative, d2=d2)
+        return course
 
     def reset(self):
         self.done = False
@@ -111,17 +124,23 @@ class MountainCarEnv(EnvBase):
         # Check for endgame
         if self.car.pos[0] >= 1:
             self.done = True
+
         self.state = self.get_state()
         self.reward = self.get_reward()
+        if self.steps >= self.max_steps:
+            self.done = True
+
         return self.state, self.reward, self.done
 
-    @staticmethod
-    def get_reward():
-        reward = 0
+    def get_reward(self):
+        if self.done:
+            reward = 1
+        else:
+            reward = self.car.pos[0]/self.max_steps
         return reward
 
     def get_state(self):
-        state = np.zeros([self.nS, 1])
+        state = np.zeros([self.state_vector_dimension, 1])
         state[0] = self.car.alpha
         state[1] = self.car.velocity[0]
         state[2] = self.car.velocity[1]
@@ -146,18 +165,10 @@ class MountainCarEnv(EnvBase):
 
 
 def run_example():
-    a = 3
-    course_function = lambda x: 0.1 + a * (x - 0.5) ** 2
-    course_derivative = lambda x: a * 2 * (x - 0.5)
-    d2 = lambda x: a * 2
-    starting_pos = [0.5, 0.1]
-    course = Course(starting_pos, course_function, derivative=course_derivative, d2=d2)
-
-    env = MountainCarEnv(course, mass=1, friction_coef=0.01, thrust=2)
-
+    env = MountainCarEnv(mass=1, friction_coef=0.01, thrust=5)
     human_player = HumanController()
     agent = human_player.pick_action
-    run_env_with_display(env=env, agent=agent)
+    run_env_with_display(env=env, agent=agent,frame_rate=10)
 
 
 if __name__ == "__main__":

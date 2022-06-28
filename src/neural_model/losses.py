@@ -24,8 +24,11 @@ class MSELoss(LossBase):
         super(MSELoss, self).__init__()
 
     def forward(self, ctx, target, layer_input):
+        # Square error per class
         loss_per_class = (layer_input - target) ** 2
+        # Sum over classes
         loss = np.sum(loss_per_class, axis=CLASSES_DIM)
+        # Average over batch
         loss = np.mean(loss)
 
         ctx.save_for_backward(layer_input, target)

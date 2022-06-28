@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from src.regressors.linear_regressor import LinearRegressor
-from src.utils.general_utils import setup_fc_model
+from src.utils.general_utils import setup_my_fc_model
 
 from src.neural_model.utils import train_model
 from src.neural_model.optim import SGD
@@ -35,7 +35,7 @@ def main():
     error = np.mean((y_pred_LinReg - yi) ** 2)
     print(f'Analytical linear regression error: {error:.2f}')
 
-    model_nn = setup_fc_model(input_size=features, output_size=1)
+    model_nn = setup_my_fc_model(input_size=features, output_size=1)
     optimizer = SGD(layers=model_nn.layers_list, learning_rate=0.01)
     train_model(Xi.T, yi[None, :], model_nn, epochs=2, optimizer=optimizer, batch_size=256)
     y_pred = model_nn(Xi.T)

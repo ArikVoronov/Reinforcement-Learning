@@ -1,23 +1,30 @@
 run_mode: 'train_rl' #train_evo / train_rl / run_env
 
 general:
-  seed: 46
+  seed: 4601
 
 env:
-  name: 'GridWorldEnv'
-  parameters:
-    rows: 4
-    cols: 4
-    max_steps: 200
-#  name: 'TrackRunnerEnv'
+#  name: 'GridWorldEnv'
 #  parameters:
-#    run_velocity: 0.015
-#    turn_degrees: 15
-#    track: '.\src\Envs\Tracks\tracky.pkl'
-#    max_steps: 250
+#    rows: 4
+#    cols: 4
+#    max_steps: 200
+  name: 'TrackRunnerEnv'
+  parameters:
+    run_velocity: 0.015
+    turn_degrees: 15
+    track: '.\src\Envs\Tracks\tracky.pkl'
+    max_steps: 250
+#  name: 'MountainCarEnv'
+#  parameters:
+#    mass: 1
+#    friction_coef: 0.001
+#    thrust: 5
+#    max_steps: 500
+
 
 model:
-  hidden_layers_dims: [ 50 ,20]
+  hidden_layers_dims: [50]
   save_file: ~
 
 train_evo:
@@ -32,15 +39,16 @@ train_evo:
 train_rl:
   rl_parameters:
     reward_discount: 0.95
-    epsilon: 0.1
-    epsilon_decay: 0.95
+    epsilon: 0.2
+    epsilon_decay: 0.99
     model_learning_rate: 0.001
   trainer_parameters:
     batch_size: 256
-    max_episodes: 10000
-    printout_episodes: 50
+    max_episodes: 2000
+    printout_episodes: 200
     output_dir_path: '.\output\rl_agents'
 
 run_env:
-  agent_weights_file_path: '.\output\rl_agents\TrackRunnerEnv_2021_07_27-02_12\agent_parameters_4250_fitness_1_00.pkl'
-  frame_rate: 5
+#  agent_weights_file_path: .\output\rl_agents\TrackRunnerEnv_2022_06_25-23_09\agent_parameters__episode_1750___fitness_1_00.pkl
+  agent_weights_file_path: ./output/rl_agents/TrackRunnerEnv_2022_06_27-16_53/agent_parameters__episode_800___fitness_1_00.pkl
+  frame_rate: 60
