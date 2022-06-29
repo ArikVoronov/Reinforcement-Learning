@@ -82,15 +82,16 @@ def run_env_with_display(env, agent, runs=1, frame_rate=60, display_size=(800, 6
                         exit_run = True
             if run_state == 'RUNNING':
                 action = agent(state)
-                state, reward, done = env.step(action)
+                action = int(action)
+                state, reward, done, info = env.step(action)
                 reward_total += reward
                 if done:
                     exit_run = True
                 # Rendering
-                env.render(game_display)
+                env.render()
                 pygame.display.update()
                 clock.tick(frame_rate)
-        pbar.desc = f"Run# {run_count} ; Steps {env.steps} ; Total Reward {reward_total}"
+        pbar.desc = f"Run# {run_count} ; Total Reward {reward_total}"
     pygame.quit()
     return reward_total
 

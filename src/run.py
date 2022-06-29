@@ -12,7 +12,7 @@ from src.utils.rl_utils import NeuralNetworkAgent
 from src.rl_trainer import RLTrainer
 from src.utils.general_utils import setup_my_fc_model, TorchFCModel
 import src.envs as envs
-
+import gym
 
 def main(path_to_config):
     config = Config.load_from_yaml(path_to_config)
@@ -22,12 +22,19 @@ def main(path_to_config):
 
     # Build env
     env_config = config.env
-    env_class = getattr(envs, env_config.name)
-    env = env_class(**env_config.parameters.to_dict())
+    env_type = env_config.type
+    env_name = env_config.name
+    if env_type == 'gym':
+        env = gym.make(env_name)
+    else:
+        env_class = getattr(envs, env_name)
+        env = env_class(**env_config.parameters.to_dict())
+    print(f'Env: {env_type} - {env_name}')
 
     # Create model
     model_config = config.model
-    model = TorchFCModel(input_size=env.state_vector_dimension, output_size=env.number_of_actions,
+    model = TorchFCModel(input_size=env.observation_space.shape[0],
+                         output_size=env.action_space.n,
                          hidden_size_list=model_config.hidden_layers_dims)
     model = model.to(model.device)
 
@@ -53,7 +60,8 @@ def main(path_to_config):
     elif run_mode == 'run_env':
         run_env_config = config.run_env
         agent = NeuralNetworkAgent(model=model)
-        agent.load_weights(run_env_config.agent_weights_file_path)
+        if run_env_config.agent_weights_file_path is not None:
+            agent.load_weights(run_env_config.agent_weights_file_path)
         run_env_with_display(env=env, agent=agent.pick_action, frame_rate=run_env_config.frame_rate)
     else:
         raise Exception(f'Config run mode {run_mode} unrecognized')

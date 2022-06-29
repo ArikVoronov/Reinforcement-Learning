@@ -21,24 +21,23 @@ class AlgorithmQL:
     """
 
     def __init__(self, apx, env, model_learning_rate,
-                 reward_discount, epsilon, epsilon_decay, epsilon_min=0.001, check_grad=False, featurize=None):
+                 reward_discount, epsilon, epsilon_decay, epsilon_min=0.001, check_grad=False):
         self.env = env
 
+        # Q Approximation Model
         self._device = apx.device
         self.q_approximator = apx
         self._optimizer = torch.optim.RMSprop(self.q_approximator.parameters(), lr=model_learning_rate)
         self._criterion = torch.nn.SmoothL1Loss()
+
+        # RL Parameters
         self.reward_discount = reward_discount
         self.epsilon_0 = epsilon
         self.epsilon_decay = epsilon_decay
         self.epsilon_min = epsilon_min
-
-        if featurize is None:
-            self.featurize = lambda x: x
-        else:
-            self.featurize = featurize
         self.epsilon = self.epsilon_0
 
+        # Misc
         self._check_grad = check_grad
 
     def load_weights(self, weights_file_path):
@@ -91,7 +90,7 @@ class AlgorithmQL:
         state = torch.tensor(state, device=self._device)
         q = self.q_approximator(state)
         number_of_actions = q.shape[-1]
-        best_action = torch.argmax(q, axis=1)
+        best_action = torch.argmax(q, dim=1)
         action_probabilities = np.ones(number_of_actions) * self.epsilon / number_of_actions
         action_probabilities[best_action] += 1 - self.epsilon
         return action_probabilities

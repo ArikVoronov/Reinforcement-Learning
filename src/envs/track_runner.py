@@ -5,12 +5,18 @@ from src.envs.track_builder import Track
 from src.envs.consts import *
 from src.envs.env_utils import run_env_with_display, HumanController, CoordinateTransformer
 from src.envs.envs_core import EnvBase
+from src.envs.spaces import Discrete, Box
 
 
 class TrackRunnerEnv(EnvBase):
     PER_STEP_REWARD = 0.01
 
     def __init__(self, run_velocity, turn_degrees, track, max_steps=None, verbose=False):
+        self.action_space = Discrete(3)
+        # [5 x sensor reading - distance to the nearest wall]
+        max_distance_to_wall = np.sqrt(2)
+        self.observation_space = Box(low=[0., 0., 0., 0., 0., ],
+                                     high=5 * [max_distance_to_wall])
         super(TrackRunnerEnv, self).__init__()
         if isinstance(track, Track):
             self.track = track
@@ -20,8 +26,8 @@ class TrackRunnerEnv(EnvBase):
             raise TypeError(f'track type must be string or {Track}')
         self.turn_degrees = turn_degrees
         self.run_velocity = run_velocity
-        self.number_of_actions = 3
-        self.state_vector_dimension = 5
+        # self.number_of_actions = 3
+        # self.state_vector_dimension = 5
         if max_steps is None:
             self.max_steps = np.inf
         else:
@@ -35,6 +41,7 @@ class TrackRunnerEnv(EnvBase):
     def reset(self):
         self.done = False
         self.steps = 0
+        self.info = {'steps': 0, 'timed out': False}
         starting_direction = self.track.starting_direction
         self.player = Player(self.track.starting_position, starting_direction, self.track, self.run_velocity,
                              self.turn_degrees)
@@ -42,18 +49,18 @@ class TrackRunnerEnv(EnvBase):
         self.state = self.get_state()
         return self.state
 
-    def step(self, action=-1):
+    def step(self, action):
         self.steps += 1
+        self.info['steps'] = 0
         self.player.update(action)
         self.get_state()
         self.reward = self.get_reward()
         if self.steps > self.max_steps:
-            if self._verbose:
-                print('Timed out')
+            self.info['timed out'] = True
             self.done = True
         if self.player.collide:
             self.done = True
-        return self.state, self.reward, self.done
+        return self.state, self.reward, self.done, self.info
 
     def get_reward(self):
         factor = self.player.speed / self.player.initial_speed  # factor=1 for constant speed
@@ -63,7 +70,7 @@ class TrackRunnerEnv(EnvBase):
         return reward
 
     def get_state(self):
-        self.state = np.zeros([self.state_vector_dimension])
+        self.state = np.zeros([self.observation_space.shape[0]])
         for i, sensor_readings in enumerate(self.player.sensor_readings_dict.values()):
             self.state[i] = sensor_readings['distance']
         return self.state
@@ -111,13 +118,15 @@ class Player:
 
     def update(self, action):
         # Actions : 0 - Nothing; 1 - Left ; 2 - Right ;  3 - Accelerate ; 4 - Decelerate ;
-        if action == 1:
+        if action == 0:
+            pass
+        elif action == 1:
             self.direction += self.turn_degrees
-        if action == 2:
+        elif action == 2:
             self.direction -= self.turn_degrees
-        if action == 3:
+        elif action == 3:
             self.speed += self.acceleration
-        if action == 4:
+        elif action == 4:
             self.speed -= self.acceleration
         self.vel = (np.cos(self.direction * np.pi / 180), np.sin(self.direction * np.pi / 180))
         self.position += np.array([self.vel[0] * self.speed, self.vel[1] * self.speed])

@@ -299,7 +299,7 @@ def main():
         policy_net = ConvModel(env.screen_height, env.screen_width, env.number_of_actions).to(device)
     elif mode == 'fc':
         env = CartEnv(state_as_image_difference=False)
-        policy_net = FCModel(env.state_vector_dimension, env.number_of_actions, hidden_size=200).to(device)
+        policy_net = FCModel(env.state_vector_dimension, env.number_of_actions, hidden_size=50).to(device)
     else:
         raise Exception()
 

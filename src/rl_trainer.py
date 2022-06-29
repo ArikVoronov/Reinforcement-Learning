@@ -74,7 +74,7 @@ class RLTrainer:
                 # Gather one batch of parameters
                 for batch_n in range(self._batch_size):
                     action = self._rl_algorithm.pick_action(state)
-                    next_state, reward, done = self._env.step(action)
+                    next_state, reward, done, info = self._env.step(action)
                     next_state = next_state.reshape(1, -1)
                     for k, v in optimization_arrays_dict.items():
                         optimization_arrays_dict[k].append(locals()[k])
