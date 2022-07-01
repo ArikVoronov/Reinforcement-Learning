@@ -1,130 +1,111 @@
 import copy
-import random
-from src.utils.rl_utils import *
+import numpy as np
+import torch
 
 
-class CLF():
-    def __init__(self,apx,env,
-                 rewardDiscount,epsilon,epsilonDecay,
-                 maxEpisodes,printoutEps,featurize,
-                 experienceCacheSize,experienceBatchSize,QCopyEpochs):
-        self.Q_Apx = copy.deepcopy(apx)
-        self.Q_Target = copy.deepcopy(self.Q_Apx)
+class AlgorithmDQN:
+    """
+    Q Learning Algorithm (with epsilon policy)
+
+    Learn the Q function with a deep learning model approximator.
+    For each step:
+    Q = apx(state)
+    Q' = apx(next_state)
+
+    target = reward + discount * Q'
+    delta = target - Q
+
+    Loss = MSE(target,Q) = (delta)**2/batch_size
+
+    Policy is epsilon-greedy, with epsilon decaying per epoch.
+    """
+
+    def __init__(self, apx, env, model_learning_rate,
+                 reward_discount, epsilon_parameters, target_update, check_grad=False):
         self.env = env
-        self.nA = env.number_of_actions
-        self.nS = env.state_vector_dimension
-        self.rewardDiscount = rewardDiscount
-        self.epsilon0 = epsilon
-        self.epsilon = epsilon
-        self.epsilonDecay = epsilonDecay
-        self.maxEpisodes = maxEpisodes
-        self.episodeStepsList = []
-        self.episodeRewardList = [] 
-        self.printoutEps = printoutEps # print progress every n episodes
-        self.t = 0
-        if featurize == None:
-            self.featurize = lambda x: x
-        else:
-            self.featurize = featurize
-        # Q Target
-        self.QCopyEpochs = QCopyEpochs
-        self.QCounter = 0
-        # Experience Replay
-        self.experienceCacheSize = experienceCacheSize
-        self.experienceBatchSize = experienceBatchSize
-        # experienceCache[state,action,reward,nextState]
-        self.experienceCache = [np.zeros([self.nS,self.experienceCacheSize]),
-                               np.zeros([self.experienceCacheSize], dtype=int),
-                               np.zeros([self.experienceCacheSize]),
-                               np.zeros([self.nS,self.experienceCacheSize])
-                               ]
-        self.experienceCounter = 0
-    def CopyWeights(self):
-        self.Q_Target.wv = copy.deepcopy(self.Q_Apx.wv)
-        self.Q_Target.bv = copy.deepcopy(self.Q_Apx.bv)
-    def train(self, env):
-        for episode in range(self.maxEpisodes):
-            state = env.reset()
-            state = self.featurize(state).reshape([-1,1])
-            episodeSteps = 0
-            episodeReward = 0
-            self.epsilon = np.maximum(0.001,self.epsilon0*self.epsilonDecay**episode)
-            while True:
-                action = self.PickAction(state)
-                nextState,reward, done = env.step(action)
-                nextState = self.featurize(nextState).reshape([-1,1])
-                
-                # Collect experiences
-                expIndex = self.experienceCounter % self.experienceCacheSize
-                self.experienceCache[0][:,expIndex] = state.squeeze()
-                self.experienceCache[1][expIndex] = int(action)
-                self.experienceCache[2][expIndex] = reward
-                self.experienceCache[3][:,expIndex] = nextState.squeeze()
-                self.experienceCounter +=1
-                
-                self.Optimize()
-                state = nextState
-                episodeSteps += 1
-                episodeReward += reward
-                
-                # Check to update QTarget
-                self.QCounter+=1
-                if not self.QCounter % self.QCopyEpochs:
-                    self.CopyWeights()
-                    
-                if done:
-                    self.episodeStepsList.append(episodeSteps)
-                    self.episodeRewardList.append(episodeReward)
-                    if not episode % self.printoutEps and episode>0:
-                        totalSteps = sum(self.episodeStepsList[-self.printoutEps:])
-                        totalReward = sum(self.episodeRewardList[-self.printoutEps:])
-                        #print('W ',np.sqrt(np.mean(self.Q_Apx.wv[-1]**2)))
-                        print('Episode {0}/{1} ; Steps {2} ; Reward {3:1.2f}'
-                              .format(episode,self.maxEpisodes, totalSteps/self.printoutEps,totalReward/self.printoutEps))
-                        # if episode % (self.printoutEps*5)==0 and episode>0:
-                        #     Pickler('pickled.dat',[self.Q_Apx.wv,self.Q_Apx.bv])
-                    break
 
-    def GetSampleIndices(self):
-        if self.experienceCounter >= self.experienceCacheSize:
-            sampleIndices = random.sample(list(range(self.experienceCacheSize)),self.experienceBatchSize)
-        else:
-            if self.experienceCounter >= self.experienceBatchSize:
-                sampleIndices = random.sample(list(range(self.experienceCounter)),self.experienceBatchSize)
-            else:
-                sampleIndices = list(range(self.experienceCounter))
-        return sampleIndices
-                
-    def Optimize(self):
-        sampleIndices = self.GetSampleIndices()
+        # Q Approximation Model
+        self._device = apx.device
+        self.q_approximator = apx
+        self.target_net = copy.deepcopy(self.q_approximator)
+        self.target_net.load_state_dict(self.q_approximator.state_dict())
+        self.target_net.eval()
+        self._target_update = target_update
 
-        states     = self.experienceCache[0][:,sampleIndices]
-        actions    = self.experienceCache[1][sampleIndices]
-        rewards    = self.experienceCache[2][sampleIndices]
-        nextStates = self.experienceCache[3][:,sampleIndices]
-        aBatch,zBatch = self.Q_Apx.forward(states)
-        
-        Qnow = self.Q_Apx.predict(states)
-        Qnext = self.Q_Apx.predict(nextStates)
-        yBatch = Qnow.copy()
+        self._optimizer = torch.optim.RMSprop(self.q_approximator.parameters(), lr=model_learning_rate)
+        self._criterion = torch.nn.SmoothL1Loss()
 
-        for s in range(len(sampleIndices)):
-            yBatch[actions[s],s] =  rewards[s] + self.rewardDiscount * np.max(Qnext[:,s])
-        
-        dz,dw,db = self.Q_Apx.backward(yBatch, aBatch, zBatch)
-        self.t+=1;
-        self.Q_Apx.optimization_step(dw, db, self.t)
-    def EpsilonPolicy(self,state):
-        Q = self.Q_Apx.predict(state).squeeze()
-        bestAction = np.argwhere(Q == np.amax(Q)) # This gives ALL indices where Q == max(Q)
-        actionProbablities = np.ones(self.nA)*self.epsilon/self.nA
-        actionProbablities[bestAction]+=(1-self.epsilon)/len(bestAction)
-        if np.abs(np.sum(actionProbablities)-1) >1e-5:
-            print('Sum of action probabilities does not equal 1')
-            import pdb;pdb.set_trace()
-        return actionProbablities
-    def PickAction(self,state):
-        actionP = self.EpsilonPolicy(state)
-        action = np.random.choice(self.nA,p = actionP)
+        # RL Parameters
+        self.reward_discount = reward_discount
+        self.epsilon_parameters = epsilon_parameters
+        self.epsilon = self._update_epsilon(0)
+
+        # Misc
+        self._check_grad = check_grad
+
+    def load_weights(self, weights_file_path):
+        self.q_approximator.load_parameters_from_file(weights_file_path)
+
+    def optimize_step(self, data_batch):
+        state_batch = torch.cat(data_batch.state).to(self._device)
+        action_batch = torch.cat(data_batch.action).to(self._device)
+        reward_batch = torch.cat(data_batch.reward).to(self._device)
+        batch_size = state_batch.shape[0]
+
+        # Forward pass
+        q_current = self.q_approximator(state_batch)  # current after next to save forward context
+
+        non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
+                                                data_batch.next_state)), device=self.q_approximator.device,
+                                      dtype=torch.bool)
+        non_final_next_states = torch.cat([s for s in data_batch.next_state
+                                           if s is not None])
+        q_next = torch.zeros([batch_size, q_current.shape[1]], device=self.q_approximator.device)
+        q_next[non_final_mask] = self.target_net(non_final_next_states).detach()
+
+        y_target = copy.deepcopy(q_current.detach())
+        targets = reward_batch.unsqueeze(1) + self.reward_discount * torch.max(q_next, dim=-1, keepdim=True)[0]
+
+        '''
+        Trick to correctly calculate the loss, where the delta should only be calculated for the chosen action.
+        e.g: action=1
+        y = [q,target,q,q]
+        q_current = [q,q,q,q]
+        MSE(y,q_current) = ([0,target-q,0,0])**2
+        '''
+        for sample in range(batch_size):
+            y_target[sample, action_batch[sample]] = targets[sample].squeeze().to(torch.float)
+
+        # Train model
+        self._optimizer.zero_grad()
+        loss = self._criterion(y_target, q_current)
+        loss.backward()
+        self._optimizer.step()
+
+    def on_episode_end(self, episode):
+        self.epsilon = self._update_epsilon(episode)
+        if episode % self._target_update == 0:
+            self.target_net.load_state_dict(self.q_approximator.state_dict())
+
+    def pick_action(self, state):
+        state = state.reshape(1, -1)
+        action_probability = self._epsilon_policy(state)
+        number_of_actions = action_probability.shape[0]
+        action = np.random.choice(number_of_actions, p=action_probability)
+        action = torch.tensor([action], device=self._device).unsqueeze(0)
         return action
-    
+
+    def _epsilon_policy(self, state):
+        with torch.no_grad():
+            state = torch.tensor(state, device=self._device)
+            q = self.q_approximator(state)
+            number_of_actions = q.shape[-1]
+            best_action = torch.argmax(q, dim=1)
+            action_probabilities = np.ones(number_of_actions) * self.epsilon / number_of_actions
+            action_probabilities[best_action] += 1 - self.epsilon
+        return action_probabilities
+
+    def _update_epsilon(self, steps_done):
+        eps_threshold = self.epsilon_parameters['end'] + (self.epsilon_parameters['start'] - self.epsilon_parameters['end']) * \
+                        np.exp(-1. * steps_done / self.epsilon_parameters['decay'])
+        return eps_threshold

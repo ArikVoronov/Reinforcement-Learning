@@ -4,6 +4,9 @@ import sklearn.preprocessing
 from sklearn.kernel_approximation import RBFSampler
 import torch
 import src.regressors.linear_regressor as LinearReg
+from collections import namedtuple, deque
+import random
+import itertools
 
 
 def replicate_weights(clfs):
@@ -109,3 +112,44 @@ class NeuralNetworkAgent:
         q = self._model(state)
         action = torch.argmax(q, dim=-1)
         return action
+
+
+class ReplayMemory(object):
+
+    def __init__(self, capacity):
+        self._capacity = capacity
+        self.memory = deque([], maxlen=self._capacity)
+
+    def push(self, *args):
+        """Save a transition"""
+        self.memory.append(EnvTransition(*args))
+
+    def sample(self, batch_size):
+        return random.sample(self.memory, batch_size)
+
+    def get_random_batch(self, batch_size):
+        transitions = self.sample(batch_size)
+        batch = EnvTransition(*zip(*transitions))
+        return batch
+
+    def get_latest_batch(self, batch_size):
+        memory_len = len(self.memory)
+        transitions = deque(itertools.islice(self.memory, max(memory_len - batch_size, 0), memory_len),
+                            maxlen=batch_size)
+        batch = EnvTransition(*zip(*transitions))
+        return batch
+
+    def __getitem__(self, item):
+        if isinstance(item, slice):
+
+            return type(self)(itertools.islice(self, item.start,
+                                               item.stop, item.step))
+        else:
+            return
+
+    def __len__(self):
+        return len(self.memory)
+
+
+EnvTransition = namedtuple('Transition',
+                           ('state', 'action', 'next_state', 'reward'))

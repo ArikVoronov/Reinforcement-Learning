@@ -16,15 +16,6 @@ import torch.nn.functional as F
 import torchvision.transforms as T
 from tqdm import tqdm
 
-BATCH_SIZE = 16
-GAMMA = 0.999
-EPS_START = 0.9
-EPS_END = 0.05
-EPS_DECAY = 10000
-TARGET_UPDATE = 10
-NUM_EPISODES = 2000
-MODEL_LR = 0.001
-
 torch.manual_seed(42)
 np.random.seed(42)
 
@@ -122,7 +113,8 @@ class CartEnv:
     def step(self, *args):
         self._env_state, reward, done, _ = self._env.step(*args)
         state = self.get_state()
-        return state, reward, done
+        info = None
+        return state, reward, done, info
 
     def reset(self):
         self._env_state = self._env.reset()
@@ -172,19 +164,32 @@ class CartEnv:
 
 
 class DQN:
-    def __init__(self, policy_net, model_lr, env, max_episodes, batch_size):
+    def __init__(self, policy_net, model_lr, env, max_episodes, batch_size, gamma, eps_parameters, target_update):
         self.env = env
         self.policy_net = policy_net
         self.target_net = deepcopy(self.policy_net)
-        self.target_net.load_state_dict(policy_net.state_dict())
+        self.target_net.load_state_dict(self.policy_net.state_dict())
         self.target_net.eval()
 
-        self.optimizer = optim.RMSprop(policy_net.parameters(), lr=model_lr)
+        self.optimizer = optim.RMSprop(self.policy_net.parameters(), lr=model_lr)
         self.memory = ReplayMemory(10000)
         self.steps_done = 0
-        self.eps_threshold = None
+
+        # Trainer Parameters
         self.batch_size = batch_size
         self.max_episodes = max_episodes
+
+        # RL Parameters
+        self.eps_parameters = eps_parameters
+        self.eps_threshold = None
+        self.target_update = target_update
+        self.gamma = gamma
+
+
+    def update_eps(self, steps_done):
+        eps_threshold = self.eps_parameters['end'] + (self.eps_parameters['start'] - self.eps_parameters['end']) * \
+                        math.exp(-1. * steps_done / self.eps_parameters['decay'])
+        return eps_threshold
 
     def train(self):
         self.batch_size = self.batch_size
@@ -199,11 +204,10 @@ class DQN:
             state = torch.tensor(state).unsqueeze(0)
             for t in count():
                 # Select and perform an action
-                self.eps_threshold = EPS_END + (EPS_START - EPS_END) * \
-                                     math.exp(-1. * self.steps_done / EPS_DECAY)
+                self.eps_threshold = self.update_eps(self.steps_done)
                 self.steps_done += 1
                 action = self.select_action(state)
-                env_state, reward, done = self.env.step(action.item())
+                env_state, reward, done, _ = self.env.step(action.item())
                 reward = torch.tensor([reward], device=device)
                 episode_reward += reward.cpu()[0].numpy()
 
@@ -229,7 +233,7 @@ class DQN:
 
             # Update the target network, copying all weights and biases in DQN
             pbar.desc = f"epoch {i_episode}, total reward {np.mean(total_reward[-10:]):.3f}, eps {self.eps_threshold:.3f}"
-            if i_episode % TARGET_UPDATE == 0:
+            if i_episode % self.target_update == 0:
                 self.target_net.load_state_dict(self.policy_net.state_dict())
 
     def optimize_model(self):
@@ -264,7 +268,7 @@ class DQN:
         next_state_values = torch.zeros(self.batch_size, device=device)
         next_state_values[non_final_mask] = self.target_net(non_final_next_states).max(1)[0].detach()
         # Compute the expected Q values
-        expected_state_action_values = (next_state_values * GAMMA) + reward_batch
+        expected_state_action_values = (next_state_values * self.gamma) + reward_batch
 
         # Compute Huber loss
         criterion = nn.SmoothL1Loss()
@@ -273,8 +277,8 @@ class DQN:
         # Optimize the model
         self.optimizer.zero_grad()
         loss.backward()
-        for param in self.policy_net.parameters():
-            param.grad.data.clamp_(-1, 1)
+        # for param in self.policy_net.parameters():
+        #     param.grad.data.clamp_(-1, 1)
         self.optimizer.step()
 
     def select_action(self, state):
@@ -303,7 +307,21 @@ def main():
     else:
         raise Exception()
 
-    dqn = DQN(policy_net, env=env, model_lr=MODEL_LR, max_episodes=NUM_EPISODES, batch_size=BATCH_SIZE)
+    NUM_EPISODES = 2000
+    MODEL_LR = 0.001
+    BATCH_SIZE = 16
+    GAMMA = 0.999
+
+    eps_parameters = {'start': 0.9, 'end': 0.001, 'decay': 10000}
+
+    EPS_START = 0.9
+    EPS_END = 0.001
+    EPS_DECAY = 10000
+
+    TARGET_UPDATE = 10
+
+    dqn = DQN(policy_net, env=env, model_lr=MODEL_LR, max_episodes=NUM_EPISODES, batch_size=BATCH_SIZE, gamma=GAMMA,
+              eps_parameters=eps_parameters, target_update=TARGET_UPDATE)
     dqn.train()
 
 

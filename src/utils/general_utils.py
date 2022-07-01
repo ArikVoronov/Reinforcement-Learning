@@ -30,39 +30,22 @@ def setup_my_fc_model(input_size, output_size, hidden_layers_dims=[50], save_fil
 
 
 class TorchFCModel(nn.Module):
-
     def __init__(self, input_size, output_size, hidden_size_list):
         super(TorchFCModel, self).__init__()
         if type(hidden_size_list) != list:
             hidden_size_list = [hidden_size_list]
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        hidden_size_list = [input_size] + hidden_size_list
-        self.fc_layers = []
-        for layer_number in range(len(hidden_size_list) - 1):
-            self.fc_layers.append(
-                nn.Linear(hidden_size_list[layer_number], hidden_size_list[layer_number + 1], device=self.device))
+        self.hidden_size_list = [input_size] + hidden_size_list
+        for layer_number in range(len(self.hidden_size_list) - 1):
+            linear_layer = nn.Linear(self.hidden_size_list[layer_number], self.hidden_size_list[layer_number + 1],
+                                     device=self.device)
+            setattr(self, f'linear_layer_{layer_number}', linear_layer)
         self.head = nn.Linear(hidden_size_list[-1], output_size)
 
     def forward(self, x):
         x = torch.tensor(x).float()
         x = x.to(self.device)
-        for layer in self.fc_layers:
+        for layer_number in range(len(self.hidden_size_list) - 1):
+            layer = getattr(self, f'linear_layer_{layer_number}')
             x = F.relu(layer(x))
         return self.head(x.view(x.size(0), -1))
-
-
-class GymEnvWrapper:
-    def __init__(self, env_name):
-        self._env = gym.make(env_name).unwrapped
-        self.state_vector_dimension = self._env.observation_space.shape[0]
-        self.number_of_actions = self._env.action_space.n
-
-    def step(self, *args):
-        state, reward, done, _ = self._env.step(*args)
-        state = state.reshape(-1, 1)
-        return state, reward, done
-
-    def reset(self):
-        state = self._env.reset()
-        state = state.reshape(-1, 1)
-        return state

@@ -88,7 +88,7 @@ def run_env_with_display(env, agent, runs=1, frame_rate=60, display_size=(800, 6
                 if done:
                     exit_run = True
                 # Rendering
-                env.render()
+                env.render(game_display)
                 pygame.display.update()
                 clock.tick(frame_rate)
         pbar.desc = f"Run# {run_count} ; Total Reward {reward_total}"

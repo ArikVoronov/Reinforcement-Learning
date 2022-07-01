@@ -3,23 +3,27 @@ import datetime
 import numpy as np
 from tqdm import tqdm
 import torch
+from src.utils.rl_utils import EnvTransition, ReplayMemory
 
 
 class RLTrainer:
     ma_constant = 0.9
 
-    def __init__(self, rl_algorithm, env, max_episodes, batch_size, output_dir_path, printout_episodes):
-        self._output_dir_path = output_dir_path
+    def __init__(self, rl_algorithm, env, max_episodes, batch_size, output_dir_path, printout_episodes,
+                 experience_memory):
 
         self._rl_algorithm = rl_algorithm
         self._env = env
         self._max_episodes = max_episodes
         self._batch_size = batch_size
+        self._experience_memory = experience_memory
+
+        self.memory = ReplayMemory(capacity=10000)
+        self._printout_episodes = printout_episodes
+        self._output_dir_path = output_dir_path
 
         self._episode_steps_list = []
         self._episode_reward_list = []
-        self._printout_episodes = printout_episodes
-
         self._best_parameters = None
         self._best_reward = -np.inf
         self._mean_steps = None
@@ -48,8 +52,8 @@ class RLTrainer:
         if (episode % self._printout_episodes == 0) and episode > 0:
             if self._output_dir_path is not None:
                 if self._best_parameters is not None:
-                    best_reward_str = str(f'{self._best_reward:.2f}'.replace('.', '_'))
-                    agent_name = f'agent_parameters__episode_{episode}___fitness_{best_reward_str}.pkl'
+                    best_reward_str = str(f'{self._best_reward.item():.2f}'.replace('.', '_'))
+                    agent_name = f'agent_parameters__episode_{episode}___fitness_{self._mean_reward}.pkl'
                     full_output_path = os.path.join(self._output_dir_path, agent_name)
                     torch.save(self._best_parameters, full_output_path)
                     self._best_parameters = None
@@ -59,46 +63,42 @@ class RLTrainer:
         pbar = tqdm(range(self._max_episodes))
         for episode in pbar:
             state = self._env.reset()
-            state = state.reshape(1, -1)
+            state = torch.tensor(state).unsqueeze(0)
             episode_steps = 0
             episode_reward = 0
             done = False
             while not done:
-                optimization_arrays_dict = {
-                    'action': list(),
-                    'state': list(),
-                    'next_state': list(),
-                    'reward': list()
-                }
-
-                # Gather one batch of parameters
-                for batch_n in range(self._batch_size):
-                    action = self._rl_algorithm.pick_action(state)
-                    next_state, reward, done, info = self._env.step(action)
-                    next_state = next_state.reshape(1, -1)
-                    for k, v in optimization_arrays_dict.items():
-                        optimization_arrays_dict[k].append(locals()[k])
-                    state = next_state
-                    episode_steps += 1
-                    episode_reward += reward
-                    if done:
-                        break
+                action = self._rl_algorithm.pick_action(state)
+                env_state, reward, done, info = self._env.step(action.item())
+                reward = torch.tensor(reward).unsqueeze(0)
+                if not done:
+                    next_state = torch.tensor(env_state).unsqueeze(0)
+                else:
+                    next_state = None
+                self.memory.push(state, action, next_state, reward)
+                state = next_state
+                episode_steps += 1
+                episode_reward += reward.cpu()[0].numpy()
 
                 # Handle done
                 if done:
                     # This has to come before the optimization step to save the best model before changing the parameters
                     self.handle_done(episode, episode_reward=episode_reward, episode_steps=episode_steps)
-                    pbar.desc = f'Steps {self._mean_steps:.1f} ; Reward {self._mean_reward:.2f}'
+                    # pbar.desc = f'Steps {self._mean_steps:.1f} ; Reward {self._mean_reward.item():.2f}'
+                    pbar.desc = f"Episode {episode}, Reward {self._mean_reward:.3f}, Steps {self._mean_steps:.3f}"
                     epsilon = self._rl_algorithm.epsilon
                     if epsilon is not None:
-                        pbar.desc += f' ; Policy Epsilon {epsilon:.3f}'
+                        pbar.desc += f', Policy Epsilon {epsilon:.3f}'
 
                 # Optimization step
-                for k, v in optimization_arrays_dict.items():
-                    optimization_arrays_dict[k] = np.vstack(v)
-                self._rl_algorithm.optimize_step(optimization_arrays_dict)
-
-            self._rl_algorithm.epoch_end()
+                if len(self.memory) < self._batch_size:
+                    continue
+                if self._experience_memory:
+                    batch_data = self.memory.get_random_batch(self._batch_size)
+                else:
+                    batch_data = self.memory.get_latest_batch(self._batch_size)
+                self._rl_algorithm.optimize_step(batch_data)
+            self._rl_algorithm.on_episode_end(episode)
 
     @staticmethod
     def update_moving_average(parameter, new_value, ma_constant):
