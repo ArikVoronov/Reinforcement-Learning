@@ -1,2 +1,2 @@
 from .DQN import AlgorithmDQN
-from .QL import AlgorithmQL
+from .ActorCritic import AlgorithmActorCritic

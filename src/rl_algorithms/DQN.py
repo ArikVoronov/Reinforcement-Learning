@@ -1,11 +1,13 @@
 import copy
 import numpy as np
 import torch
+from pytorch_model_summary import summary
+from src.utils.general_utils import DenseQModel
 
 
 class AlgorithmDQN:
     """
-    Q Learning Algorithm (with epsilon policy)
+    DQN - Q Learning Algorithm (with epsilon policy)
 
     Learn the Q function with a deep learning model approximator.
     For each step:
@@ -18,33 +20,48 @@ class AlgorithmDQN:
     Loss = MSE(target,Q) = (delta)**2/batch_size
 
     Policy is epsilon-greedy, with epsilon decaying per epoch.
+
+    DQN Optional:
+    use target_update>0 to enable target model which periodically updates
+
     """
 
-    def __init__(self, apx, env, model_learning_rate,
-                 reward_discount, epsilon_parameters, target_update, check_grad=False):
+    def __init__(self, model_config, env, model_learning_rate,
+                 reward_discount, epsilon_parameters, target_update_interval=0):
         self.env = env
 
-        # Q Approximation Model
-        self._device = apx.device
-        self.q_approximator = apx
-        self.target_net = copy.deepcopy(self.q_approximator)
-        self.target_net.load_state_dict(self.q_approximator.state_dict())
-        self.target_net.eval()
-        self._target_update = target_update
-
-        self._optimizer = torch.optim.RMSprop(self.q_approximator.parameters(), lr=model_learning_rate)
-        self._criterion = torch.nn.SmoothL1Loss()
+        self._model_learning_rate = model_learning_rate
+        self._target_update_interval = target_update_interval
+        self._create_model(model_config)
 
         # RL Parameters
         self.reward_discount = reward_discount
         self.epsilon_parameters = epsilon_parameters
         self.epsilon = self._update_epsilon(0)
 
-        # Misc
-        self._check_grad = check_grad
+    def _create_model(self, model_config):
+        # Q Approximation Model
+        nn_model = DenseQModel(input_size=self.env.observation_space.shape[0],
+                               output_size=self.env.action_space.n,
+                               hidden_size_list=model_config['hidden_layers_dims'])
+
+        self._device = nn_model.device
+        self.nn_model = nn_model.to(self._device)
+        self._optimizer = torch.optim.RMSprop(self.nn_model.parameters(), lr=self._model_learning_rate)
+        self._criterion = torch.nn.SmoothL1Loss()
+
+        if self._target_update_interval > 0:
+            self.target_model = copy.deepcopy(self.nn_model)
+            self.target_model.load_state_dict(self.nn_model.state_dict())
+            self.target_model.eval()
+        else:
+            self.target_model = self.nn_model
+
+        print(summary(self.nn_model, torch.zeros([1, self.env.observation_space.shape[0]]).to(self._device),
+                      show_input=True))
 
     def load_weights(self, weights_file_path):
-        self.q_approximator.load_parameters_from_file(weights_file_path)
+        self.nn_model.load_parameters_from_file(weights_file_path)
 
     def optimize_step(self, data_batch):
         state_batch = torch.cat(data_batch.state).to(self._device)
@@ -53,15 +70,15 @@ class AlgorithmDQN:
         batch_size = state_batch.shape[0]
 
         # Forward pass
-        q_current = self.q_approximator(state_batch)  # current after next to save forward context
+        q_current = self.nn_model(state_batch)  # current after next to save forward context
 
         non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
-                                                data_batch.next_state)), device=self.q_approximator.device,
+                                                data_batch.next_state)), device=self.nn_model.device,
                                       dtype=torch.bool)
         non_final_next_states = torch.cat([s for s in data_batch.next_state
                                            if s is not None])
-        q_next = torch.zeros([batch_size, q_current.shape[1]], device=self.q_approximator.device)
-        q_next[non_final_mask] = self.target_net(non_final_next_states).detach()
+        q_next = torch.zeros([batch_size, q_current.shape[1]], device=self.nn_model.device)
+        q_next[non_final_mask] = self.target_model(non_final_next_states).detach()
 
         y_target = copy.deepcopy(q_current.detach())
         targets = reward_batch.unsqueeze(1) + self.reward_discount * torch.max(q_next, dim=-1, keepdim=True)[0]
@@ -84,8 +101,8 @@ class AlgorithmDQN:
 
     def on_episode_end(self, episode):
         self.epsilon = self._update_epsilon(episode)
-        if episode % self._target_update == 0:
-            self.target_net.load_state_dict(self.q_approximator.state_dict())
+        if (self._target_update_interval > 0) and (episode % self._target_update_interval == 0):
+            self.target_model.load_state_dict(self.nn_model.state_dict())
 
     def pick_action(self, state):
         state = state.reshape(1, -1)
@@ -98,7 +115,7 @@ class AlgorithmDQN:
     def _epsilon_policy(self, state):
         with torch.no_grad():
             state = torch.tensor(state, device=self._device)
-            q = self.q_approximator(state)
+            q = self.nn_model(state)
             number_of_actions = q.shape[-1]
             best_action = torch.argmax(q, dim=1)
             action_probabilities = np.ones(number_of_actions) * self.epsilon / number_of_actions
@@ -106,6 +123,7 @@ class AlgorithmDQN:
         return action_probabilities
 
     def _update_epsilon(self, steps_done):
-        eps_threshold = self.epsilon_parameters['end'] + (self.epsilon_parameters['start'] - self.epsilon_parameters['end']) * \
+        eps_threshold = self.epsilon_parameters['end'] + (
+                self.epsilon_parameters['start'] - self.epsilon_parameters['end']) * \
                         np.exp(-1. * steps_done / self.epsilon_parameters['decay'])
         return eps_threshold

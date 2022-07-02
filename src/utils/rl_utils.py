@@ -1,3 +1,5 @@
+import os.path
+
 import numpy as np
 import sklearn.pipeline
 import sklearn.preprocessing
@@ -100,18 +102,26 @@ def create_featurizer(env):
 
 
 class NeuralNetworkAgent:
-    def __init__(self, model):
+    def __init__(self, model, verbose=False):
         self._model = model
+        self._verbose = verbose
 
     def load_weights(self, weights_file_path):
+        if not os.path.isfile(weights_file_path):
+            raise FileExistsError()
         state_dict = torch.load(weights_file_path)
         self._model.load_state_dict(state_dict)
 
     def pick_action(self, state):
         state = state.reshape(1, -1)
-        q = self._model(state)
+        with torch.no_grad():
+            q = self._model(state)
+        if type(q) == tuple: # With Actor-Critic, choose only the policy output
+            q = q[0]
+        if self._verbose:
+            print(f'state: {state}, Q(a): {q}')
         action = torch.argmax(q, dim=-1)
-        return action
+        return action.item()
 
 
 class ReplayMemory(object):

@@ -64,13 +64,13 @@ class TrackRunnerEnv(EnvBase):
 
     def get_reward(self):
         factor = self.player.speed / self.player.initial_speed  # factor=1 for constant speed
-        reward = 1 / self.max_steps
+        reward = np.round(1 / self.max_steps, 3).astype(np.float32)
         if self.player.collide:
-            reward += -1
+            reward += -1.
         return reward
 
     def get_state(self):
-        self.state = np.zeros([self.observation_space.shape[0]])
+        self.state = np.zeros([self.observation_space.shape[0]], dtype=np.float32)
         for i, sensor_readings in enumerate(self.player.sensor_readings_dict.values()):
             self.state[i] = sensor_readings['distance']
         return self.state
@@ -172,7 +172,7 @@ class Player:
                         sensor_distance = intersection_distance
                         sensor_position = intersection_position
                         break
-            sensor_readings_dict[sensor_angle] = {'position': sensor_position, 'distance': sensor_distance}
+            sensor_readings_dict[sensor_angle] = {'position': sensor_position, 'distance': np.round(sensor_distance, 2)}
         return sensor_readings_dict
 
     def _collision_detection(self):

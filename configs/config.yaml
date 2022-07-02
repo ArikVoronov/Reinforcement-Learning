@@ -1,14 +1,10 @@
 run_mode: 'train_rl' #train_evo / train_rl / run_env
 
 general:
-  seed: 42
+  seed: 46001
 
 env:
-#  name: 'GridWorldEnv'
-#  parameters:
-#    rows: 4
-#    cols: 4
-#    max_steps: 200
+
   type: 'mine'
   name: 'TrackRunnerEnv'
   parameters:
@@ -16,20 +12,51 @@ env:
     turn_degrees: 15
     track: '.\src\Envs\Tracks\tracky.pkl'
     max_steps: 250
-
-#  type: 'gym'
-#  name: CartPole-v0 # FrozenLake-v1 / CartPole-v0
 #  name: 'MountainCarEnv'
 #  parameters:
 #    mass: 1
 #    friction_coef: 0.001
 #    thrust: 5
 #    max_steps: 500
+#  name: 'GridWorldEnv'
+#  parameters:
+#    rows: 4
+#    cols: 4
+#    max_steps: 200
+#  type: 'gym'
+#  name: CartPole-v0 # FrozenLake-v1 / CartPole-v0
 
 
-model:
-  hidden_layers_dims: [50]
-  save_file: ~
+
+
+
+
+train_rl:
+  rl_algorithms:
+    AlgorithmDQN:
+      reward_discount: 0.95
+      model_learning_rate: 0.001
+      target_update_interval: 0 # Set 0 to disable target model and use the same model for target and current q
+      epsilon_parameters:
+        start: 0.0
+        end: 0.000
+        decay: 200
+      model_config:
+        hidden_layers_dims: [ 1024,512 ]
+        save_file: ~
+#    AlgorithmActorCritic:
+#      reward_discount: 0.95
+#      model_learning_rate: 0.00005
+#      model_config:
+#        hidden_layers_dims: [ 1024,512 ]
+#        save_file: ~
+
+  trainer_parameters:
+    batch_size: 16
+    max_episodes: 20000
+    printout_episodes: 200
+    output_dir_path: '.\output\rl_agents'
+    experience_memory: False # True to sample uniformly from memory, False to get only the last 'batch_size' items
 
 train_evo:
   specimen_count: 200
@@ -40,24 +67,8 @@ train_evo:
   fitness_target: -50
   output_dir: '.\output\evo_agents'
 
-train_rl:
-  rl_algorithms:
-    AlgorithmQL:
-#      target_update: 10
-      reward_discount: 0.95
-      model_learning_rate: 0.001
-      epsilon_parameters:
-        start: 0.2
-        end: 0.001
-        decay: 200
-  trainer_parameters:
-    batch_size: 16
-    max_episodes: 20000
-    printout_episodes: 200
-    output_dir_path: '.\output\rl_agents'
-    experience_memory: False # True to sample uniformly from memory, False to get only the last 'batch_size' items
-
 run_env:
-#  agent_weights_file_path: .\output\rl_agents\TrackRunnerEnv_2022_06_25-23_09\agent_parameters__episode_1750___fitness_1_00.pkl
-  agent_weights_file_path: ./output/rl_agents/TrackRunnerEnv_2022_07_01-10_23/agent_parameters__episode_400___fitness_1_00.pkl
-  frame_rate: 60
+  #  agent_weights_file_path: .\output\rl_agents\TrackRunnerEnv_2022_06_25-23_09\agent_parameters__episode_1750___fitness_1_00.pkl
+  agent_weights_file_path: .\output\rl_agents\TrackRunnerEnv_2022_07_02-20_43\agent_parameters__episode_100___fitness_1_00.pkl
+  verbose: False
+  frame_rate: 25

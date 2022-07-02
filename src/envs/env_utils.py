@@ -24,13 +24,18 @@ class HumanController:
         return action
 
 
+import torch
+
+
 def run_env(env, agent):
-    state = env.reset()
+    env_state = env.reset()
+    state = torch.tensor(env_state, dtype=torch.float32).unsqueeze(0)
     reward_total = 0
     exit_run = False
     while not exit_run:
         action = agent(state)
-        state, reward, done = env.step(action)
+        env_state, reward, done, info = env.step(action)
+        state = torch.tensor(env_state, dtype=torch.float32).unsqueeze(0)
         reward_total += reward
         if done:
             exit_run = True
@@ -65,6 +70,7 @@ def run_env_with_display(env, agent, runs=1, frame_rate=60, display_size=(800, 6
     reward_total = 0
     for run_count in pbar:
         state = env.reset()
+        state = torch.tensor(state).unsqueeze(0)
         reward_total = 0
         exit_run = False
         run_state = 'RUNNING'
@@ -82,8 +88,8 @@ def run_env_with_display(env, agent, runs=1, frame_rate=60, display_size=(800, 6
                         exit_run = True
             if run_state == 'RUNNING':
                 action = agent(state)
-                action = int(action)
-                state, reward, done, info = env.step(action)
+                state, reward, done, info = env.step(action.item())
+                state = torch.tensor(state).unsqueeze(0)
                 reward_total += reward
                 if done:
                     exit_run = True

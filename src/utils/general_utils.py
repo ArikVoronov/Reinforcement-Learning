@@ -29,9 +29,9 @@ def setup_my_fc_model(input_size, output_size, hidden_layers_dims=[50], save_fil
     return model
 
 
-class TorchFCModel(nn.Module):
+class DenseQModel(nn.Module):
     def __init__(self, input_size, output_size, hidden_size_list):
-        super(TorchFCModel, self).__init__()
+        super(DenseQModel, self).__init__()
         if type(hidden_size_list) != list:
             hidden_size_list = [hidden_size_list]
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -43,9 +43,34 @@ class TorchFCModel(nn.Module):
         self.head = nn.Linear(hidden_size_list[-1], output_size)
 
     def forward(self, x):
-        x = torch.tensor(x).float()
+        # x = x.float()
         x = x.to(self.device)
         for layer_number in range(len(self.hidden_size_list) - 1):
             layer = getattr(self, f'linear_layer_{layer_number}')
             x = F.relu(layer(x))
         return self.head(x.view(x.size(0), -1))
+
+
+class DenseActorCriticModel(nn.Module):
+    def __init__(self, input_size, n_actions, hidden_size_list):
+        super(DenseActorCriticModel, self).__init__()
+        if type(hidden_size_list) != list:
+            hidden_size_list = [hidden_size_list]
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.hidden_size_list = [input_size] + hidden_size_list
+        for layer_number in range(len(self.hidden_size_list) - 1):
+            linear_layer = nn.Linear(self.hidden_size_list[layer_number], self.hidden_size_list[layer_number + 1],
+                                     device=self.device)
+            setattr(self, f'linear_layer_{layer_number}', linear_layer)
+        self.policy_head = nn.Linear(hidden_size_list[-1], n_actions)
+        self.value_head = nn.Linear(hidden_size_list[-1], 1)
+
+    def forward(self, x):
+        x = torch.tensor(x).float()
+        x = x.to(self.device)
+        for layer_number in range(len(self.hidden_size_list) - 1):
+            layer = getattr(self, f'linear_layer_{layer_number}')
+            x = F.relu(layer(x))
+        value = self.value_head(x.view(x.size(0), -1))
+        policy_probabilities = F.softmax(self.policy_head(x.view(x.size(0), -1)), dim=1)
+        return policy_probabilities, value
