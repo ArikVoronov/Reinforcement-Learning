@@ -60,25 +60,15 @@ def main(path_to_config):
             trainer = RLTrainer(rl_algorithm=algorithm_list[i], env=env, **train_rl_config.trainer_parameters.to_dict())
             trainer.train()
 
-    elif run_mode == 'train_dqn':
-        trainer_parameters = config.train_rl.trainer_parameters
-        rl_parameters = config.train_rl.rl_parameters
-        # dqn_model = dqn_ordered.FCModel(env.observation_space.shape[0], env.action_space.n, hidden_size=50).to('cuda:0')
-        dqn = dqn_ordered.DQN(model,
-                              env=env,
-                              model_lr=rl_parameters.model_learning_rate,
-                              max_episodes=trainer_parameters.max_episodes, batch_size=trainer_parameters.batch_size,
-                              gamma=rl_parameters.reward_discount,
-                              eps_parameters=rl_parameters.epsilon_parameters.to_dict(),
-                              target_update=rl_parameters.target_update)
-        dqn.train()
-
     elif run_mode == 'run_env':
         run_env_config = config.run_env
-        agent = NeuralNetworkAgent(model=model, verbose=run_env_config.verbose)
-        if run_env_config.agent_weights_file_path is not None:
-            agent.load_weights(run_env_config.agent_weights_file_path)
-        run_env_with_display(env=env, agent=agent.pick_action, frame_rate=run_env_config.frame_rate)
+        train_rl_config = config.train_rl
+        for algorithm_name, algorithm_parameters in train_rl_config.rl_algorithms:
+            algorithm_class = getattr(rl_algorithms, algorithm_name)
+            agent = algorithm_class(env=env, **algorithm_parameters.to_dict())
+            if run_env_config.agent_weights_file_path is not None:
+                agent.load_weights(run_env_config.agent_weights_file_path)
+            run_env_with_display(env=env, agent=agent.pick_action, frame_rate=run_env_config.frame_rate)
     else:
         raise Exception(f'Config run mode {run_mode} unrecognized')
 

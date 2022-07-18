@@ -1,7 +1,7 @@
 run_mode: 'train_rl' #train_evo / train_rl / run_env
 
 general:
-  seed: 46001
+  seed: 4601
 
 env:
 
@@ -28,13 +28,10 @@ env:
 
 
 
-
-
-
 train_rl:
   rl_algorithms:
     AlgorithmDQN:
-      reward_discount: 0.95
+      reward_discount: 0.99
       model_learning_rate: 0.001
       target_update_interval: 0 # Set 0 to disable target model and use the same model for target and current q
       epsilon_parameters:
