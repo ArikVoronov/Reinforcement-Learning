@@ -10,7 +10,7 @@ import src.rl_algorithms as rl_algorithms
 from src.envs.env_utils import run_env_with_display
 from src.utils.rl_utils import NeuralNetworkAgent
 from src.rl_trainer import RLTrainer
-from src.utils.general_utils import setup_my_fc_model, DenseQModel, DenseActorCriticModel
+from src.utils.models import setup_my_fc_model, DenseQModel, DenseActorCriticModel
 import src.envs as envs
 
 from pytorch_dqn_example import dqn_ordered
@@ -57,7 +57,7 @@ def main(path_to_config):
         print('\nTraining RL algorithms')
         for i in range(len(algorithm_list)):
             print('\nTraining algorithms #', i + 1)
-            trainer = RLTrainer(rl_algorithm=algorithm_list[i], env=env, **train_rl_config.trainer_parameters.to_dict())
+            trainer = RLTrainer(rl_algorithm=algorithm_list[i], env=env, trainer_config=train_rl_config.trainer_parameters)
             trainer.train()
 
     elif run_mode == 'run_env':
@@ -68,7 +68,7 @@ def main(path_to_config):
             agent = algorithm_class(env=env, **algorithm_parameters.to_dict())
             if run_env_config.agent_weights_file_path is not None:
                 agent.load_weights(run_env_config.agent_weights_file_path)
-            run_env_with_display(env=env, agent=agent.pick_action, frame_rate=run_env_config.frame_rate)
+            run_env_with_display(env=env, agent=agent.pick_action, frame_rate=run_env_config.frame_rate,runs = run_env_config.runs)
     else:
         raise Exception(f'Config run mode {run_mode} unrecognized')
 

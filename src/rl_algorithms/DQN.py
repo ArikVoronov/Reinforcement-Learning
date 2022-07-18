@@ -2,7 +2,7 @@ import copy
 import numpy as np
 import torch
 from pytorch_model_summary import summary
-from src.utils.general_utils import DenseQModel
+from src.utils.models import DenseQModel
 
 
 class AlgorithmDQN:
@@ -61,7 +61,8 @@ class AlgorithmDQN:
                       show_input=True))
 
     def load_weights(self, weights_file_path):
-        self.nn_model.load_parameters_from_file(weights_file_path)
+        weights = torch.load(weights_file_path)
+        self.nn_model.load_state_dict(weights)
 
     def optimize_step(self, data_batch):
         state_batch = torch.cat(data_batch.state).to(self._device)
@@ -111,6 +112,12 @@ class AlgorithmDQN:
         action = np.random.choice(number_of_actions, p=action_probability)
         action = torch.tensor([action], device=self._device).unsqueeze(0)
         return action
+
+    def pick_test_action(self, state):
+        with torch.no_grad():
+            q = self.nn_model(state)
+        best_action = torch.argmax(q, dim=1)
+        return best_action.item()
 
     def _epsilon_policy(self, state):
         with torch.no_grad():

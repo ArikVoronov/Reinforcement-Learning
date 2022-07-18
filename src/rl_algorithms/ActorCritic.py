@@ -1,7 +1,7 @@
 import copy
 import torch
 from pytorch_model_summary import summary
-from src.utils.general_utils import DenseActorCriticModel
+from src.utils.models import DenseActorCriticModel
 
 
 class AlgorithmActorCritic:
@@ -89,6 +89,14 @@ class AlgorithmActorCritic:
             policy = torch.abs(policy)
             chosen_action = torch.multinomial(policy, policy.shape[0], replacement=True)
         return chosen_action
+
+    def pick_test_action(self, state):
+        with torch.no_grad():
+            if not type(state) == torch.Tensor:
+                state = torch.tensor(state, device=self._device)
+            policy, _ = self.nn_model(state)
+            chosen_action = torch.max(policy)
+        return chosen_action.item()
 
     def on_episode_end(self, episode):
         pass

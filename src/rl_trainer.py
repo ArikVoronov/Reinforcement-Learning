@@ -12,18 +12,19 @@ from src.utils.rl_utils import NeuralNetworkAgent
 class RLTrainer:
     ma_constant = 0.9
 
-    def __init__(self, rl_algorithm, env, max_episodes, batch_size, output_dir_path, printout_episodes,
-                 experience_memory):
+    def __init__(self, rl_algorithm, env, trainer_config):
 
         self._rl_algorithm = rl_algorithm
         self._env = env
-        self._max_episodes = max_episodes
-        self._batch_size = batch_size
-        self._experience_memory = experience_memory
+        self._config = trainer_config
+        self._max_episodes = self._config.max_episodes
+        self._batch_size = self._config.batch_size
+        self._experience_memory = self._config.experience_memory
 
         self.memory = ReplayMemory(capacity=10000)
-        self._printout_episodes = printout_episodes
-        self._output_dir_path = output_dir_path
+        self._test_every = self._config.test_every
+        self._test_episodes = self._config.test_episodes
+        self._output_dir_path = self._config.output_dir_path
 
         self._episode_steps_list = []
         self._episode_reward_list = []
@@ -49,16 +50,27 @@ class RLTrainer:
         self._episode_reward_list.append(episode_reward)
         self._mean_steps = self.update_moving_average(self._mean_steps, episode_steps, ma_constant=self.ma_constant)
         self._mean_reward = self.update_moving_average(self._mean_reward, episode_reward, ma_constant=self.ma_constant)
-        if (episode % self._printout_episodes == 0) and episode > 0:
+        if (episode % self._test_every == 0) and episode > 0:
+            test_rewards = self.test()
+            test_reward_mean = np.mean(test_rewards)
+            test_reward_std = np.std(test_rewards)
+            best_reward_str = str(f'{test_reward_mean:.2f}'.replace('.', '_'))
+            print(f'Test rewards - mean: {test_reward_mean} ; std: {test_reward_std}')
             if self._output_dir_path is not None:
-                    new_model = copy.deepcopy(self._rl_algorithm.nn_model)
-                    agent = NeuralNetworkAgent(model=new_model)
-                    check_reward = run_env(self._env, agent.pick_action)
-                    best_reward_str = str(f'{check_reward:.2f}'.replace('.', '_'))
-                    agent_name = f'agent_parameters__episode_{episode}___fitness_{best_reward_str}.pkl'
-                    full_output_path = os.path.join(self._output_dir_path, agent_name)
-                    torch.save(self._rl_algorithm.nn_model.state_dict(), full_output_path)
-                    print(f'Saved model {agent_name}')
+                agent_name = f'agent_parameters__episode_{episode}___fitness_{best_reward_str}.pkl'
+                full_output_path = os.path.join(self._output_dir_path, agent_name)
+                torch.save(self._rl_algorithm.nn_model.state_dict(), full_output_path)
+                print(f'Saved model to {full_output_path}')
+
+    def test(self):
+        print('Testing')
+        test_rewards = list()
+        for _ in range(self._test_episodes):
+            # new_model = copy.deepcopy(self._rl_algorithm.nn_model)
+            agent = self._rl_algorithm.pick_test_action
+            test_reward = run_env(self._env, agent)
+            test_rewards.append(test_reward)
+        return test_rewards
 
     def train(self):
         pbar = tqdm(range(self._max_episodes))

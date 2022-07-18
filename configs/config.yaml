@@ -1,4 +1,4 @@
-run_mode: 'train_rl' #train_evo / train_rl / run_env
+run_mode: 'run_env' #train_evo / train_rl / run_env
 
 general:
   seed: 4601
@@ -12,6 +12,7 @@ env:
     turn_degrees: 15
     track: '.\src\Envs\Tracks\tracky.pkl'
     max_steps: 250
+    direction_randomization_coef: 0.1
 #  name: 'MountainCarEnv'
 #  parameters:
 #    mass: 1
@@ -41,19 +42,20 @@ train_rl:
       model_config:
         hidden_layers_dims: [ 1024,512 ]
         save_file: ~
-#    AlgorithmActorCritic:
-#      reward_discount: 0.95
-#      model_learning_rate: 0.00005
-#      model_config:
-#        hidden_layers_dims: [ 1024,512 ]
-#        save_file: ~
+  #    AlgorithmActorCritic:
+  #      reward_discount: 0.95
+  #      model_learning_rate: 0.00005
+  #      model_config:
+  #        hidden_layers_dims: [ 1024,512 ]
+  #        save_file: ~
 
   trainer_parameters:
-    batch_size: 16
+    batch_size: 256
     max_episodes: 20000
-    printout_episodes: 200
+    test_every: 100
+    test_episodes: 10
     output_dir_path: '.\output\rl_agents'
-    experience_memory: False # True to sample uniformly from memory, False to get only the last 'batch_size' items
+    experience_memory: True # True to sample uniformly from memory, False to get only the last 'batch_size' items
 
 train_evo:
   specimen_count: 200
@@ -66,6 +68,7 @@ train_evo:
 
 run_env:
   #  agent_weights_file_path: .\output\rl_agents\TrackRunnerEnv_2022_06_25-23_09\agent_parameters__episode_1750___fitness_1_00.pkl
-  agent_weights_file_path: .\output\rl_agents\TrackRunnerEnv_2022_07_02-20_43\agent_parameters__episode_100___fitness_1_00.pkl
+  agent_weights_file_path: F:\Study\Programming\PycharmProjects\Reinforcement-Learning\output\rl_agents\TrackRunnerEnv_2022_07_18-11_42\agent_parameters__episode_300___fitness_0_68.pkl
   verbose: False
-  frame_rate: 25
+  frame_rate: 60
+  runs: 10

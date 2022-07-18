@@ -11,7 +11,8 @@ from src.envs.spaces import Discrete, Box
 class TrackRunnerEnv(EnvBase):
     PER_STEP_REWARD = 0.01
 
-    def __init__(self, run_velocity, turn_degrees, track, max_steps=None, verbose=False):
+    def __init__(self, run_velocity, turn_degrees, track, direction_randomization_coef=0, max_steps=None,
+                 verbose=False):
         self.action_space = Discrete(3)
         # [5 x sensor reading - distance to the nearest wall]
         max_distance_to_wall = np.sqrt(2)
@@ -24,6 +25,7 @@ class TrackRunnerEnv(EnvBase):
             self.track = Track.load(track)
         else:
             raise TypeError(f'track type must be string or {Track}')
+        self.direction_randomization_coef = direction_randomization_coef
         self.turn_degrees = turn_degrees
         self.run_velocity = run_velocity
         # self.number_of_actions = 3
@@ -42,7 +44,8 @@ class TrackRunnerEnv(EnvBase):
         self.done = False
         self.steps = 0
         self.info = {'steps': 0, 'timed out': False}
-        starting_direction = self.track.starting_direction
+        starting_direction = self.track.starting_direction * (
+                1 + self.direction_randomization_coef * 2 * (np.random.rand() - 0.5))
         self.player = Player(self.track.starting_position, starting_direction, self.track, self.run_velocity,
                              self.turn_degrees)
         self.player.sensor_readings_dict = self.player.get_sensor_readings()

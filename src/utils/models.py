@@ -43,7 +43,7 @@ class DenseQModel(nn.Module):
         self.head = nn.Linear(hidden_size_list[-1], output_size)
 
     def forward(self, x):
-        # x = x.float()
+        x = x.float()
         x = x.to(self.device)
         for layer_number in range(len(self.hidden_size_list) - 1):
             layer = getattr(self, f'linear_layer_{layer_number}')
