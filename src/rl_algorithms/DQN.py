@@ -2,7 +2,7 @@ import copy
 import numpy as np
 import torch
 from pytorch_model_summary import summary
-from src.utils.models import DenseQModel
+from src.utils.models import DenseDiscreteQModel
 
 
 class AlgorithmDQN:
@@ -41,9 +41,9 @@ class AlgorithmDQN:
 
     def _create_model(self, model_config):
         # Q Approximation Model
-        nn_model = DenseQModel(input_size=self.env.observation_space.shape[0],
-                               output_size=self.env.action_space.n,
-                               hidden_size_list=model_config['hidden_layers_dims'])
+        nn_model = DenseDiscreteQModel(input_size=self.env.observation_space.shape[0],
+                                       output_size=self.env.action_space.n,
+                                       hidden_size_list=model_config['hidden_layers_dims'])
 
         self._device = nn_model.device
         self.nn_model = nn_model.to(self._device)

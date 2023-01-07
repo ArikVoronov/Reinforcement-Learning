@@ -29,12 +29,12 @@ def setup_my_fc_model(input_size, output_size, hidden_layers_dims=[50], save_fil
     return model
 
 
-class DenseQModel(nn.Module):
-    def __init__(self, input_size, output_size, hidden_size_list):
-        super(DenseQModel, self).__init__()
+class DenseDiscreteQModel(nn.Module):
+    def __init__(self, input_size, output_size, hidden_size_list, device=None):
+        super(DenseDiscreteQModel, self).__init__()
         if type(hidden_size_list) != list:
             hidden_size_list = [hidden_size_list]
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") if device is None else device
         self.hidden_size_list = [input_size] + hidden_size_list
         for layer_number in range(len(self.hidden_size_list) - 1):
             linear_layer = nn.Linear(self.hidden_size_list[layer_number], self.hidden_size_list[layer_number + 1],
@@ -52,11 +52,11 @@ class DenseQModel(nn.Module):
 
 
 class DenseActorCriticModel(nn.Module):
-    def __init__(self, input_size, n_actions, hidden_size_list):
+    def __init__(self, input_size, n_actions, hidden_size_list, device=None):
         super(DenseActorCriticModel, self).__init__()
         if type(hidden_size_list) != list:
             hidden_size_list = [hidden_size_list]
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") if device is None else device
         self.hidden_size_list = [input_size] + hidden_size_list
         for layer_number in range(len(self.hidden_size_list) - 1):
             linear_layer = nn.Linear(self.hidden_size_list[layer_number], self.hidden_size_list[layer_number + 1],
@@ -74,3 +74,54 @@ class DenseActorCriticModel(nn.Module):
         value = self.value_head(x.view(x.size(0), -1))
         policy_probabilities = F.softmax(self.policy_head(x.view(x.size(0), -1)), dim=1)
         return policy_probabilities, value
+
+
+class DenseContinuousActorModel(nn.Module):
+    def __init__(self, input_size, n_actions, hidden_size_list, act_limit, device=None):
+        super(DenseContinuousActorModel, self).__init__()
+        self._act_limit = act_limit
+        if type(hidden_size_list) != list:
+            hidden_size_list = [hidden_size_list]
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") if device is None else device
+        self.hidden_size_list = [input_size] + hidden_size_list
+        for layer_number in range(len(self.hidden_size_list) - 1):
+            linear_layer = nn.Linear(self.hidden_size_list[layer_number], self.hidden_size_list[layer_number + 1],
+                                     device=self.device)
+            setattr(self, f'linear_layer_{layer_number}', linear_layer)
+        self.head = nn.Linear(hidden_size_list[-1], n_actions)
+
+    def forward(self, x):
+        x = torch.tensor(x).float()
+        x = x.to(self.device)
+        for layer_number in range(len(self.hidden_size_list) - 1):
+            layer = getattr(self, f'linear_layer_{layer_number}')
+            x = F.relu(layer(x))
+        actions = self._act_limit * F.tanh(self.head(x.view(x.size(0), -1)))
+        return actions
+
+
+class DenseContinuousQModel(nn.Module):
+    def __init__(self, state_dim, n_actions, hidden_size_list, device=None):
+        super(DenseContinuousQModel, self).__init__()
+        if type(hidden_size_list) != list:
+            hidden_size_list = [hidden_size_list]
+
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") if device is None else device
+
+        self.hidden_size_list = [state_dim + n_actions] + hidden_size_list
+        for layer_number in range(len(self.hidden_size_list) - 1):
+            linear_layer = nn.Linear(self.hidden_size_list[layer_number], self.hidden_size_list[layer_number + 1],
+                                     device=self.device)
+            setattr(self, f'linear_layer_{layer_number}', linear_layer)
+        self.head = nn.Linear(hidden_size_list[-1], 1)
+        self.head_activation = nn.Identity()
+
+    def forward(self, x):
+        if type(x) != torch.Tensor:
+            x = torch.tensor(x).float()
+        x = x.to(self.device)
+        for layer_number in range(len(self.hidden_size_list) - 1):
+            layer = getattr(self, f'linear_layer_{layer_number}')
+            x = F.relu(layer(x))
+        q = self.head_activation(self.head(x.view(x.size(0), -1)))
+        return q

@@ -10,7 +10,7 @@ import src.rl_algorithms as rl_algorithms
 from src.envs.env_utils import run_env_with_display
 from src.utils.rl_utils import NeuralNetworkAgent
 from src.rl_trainer import RLTrainer
-from src.utils.models import setup_my_fc_model, DenseQModel, DenseActorCriticModel
+from src.utils.models import setup_my_fc_model, DenseDiscreteQModel, DenseActorCriticModel
 import src.envs as envs
 
 from pytorch_dqn_example import dqn_ordered

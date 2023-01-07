@@ -82,7 +82,7 @@ class RLTrainer:
             done = False
             while not done:
                 action = self._rl_algorithm.pick_action(state)
-                env_state, reward, done, info = self._env.step(action.item())
+                env_state, reward, done, info = self._env.step([action.item()])
                 reward = torch.tensor(reward, dtype=torch.float32).unsqueeze(0)
                 if not done:
                     next_state = torch.tensor(env_state, dtype=torch.float32).unsqueeze(0)
